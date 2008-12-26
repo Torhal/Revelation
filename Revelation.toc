@@ -1,0 +1,20 @@
+## Interface: 30000
+## Title: Revelation
+## Notes: Allows tradeskill usage by ALT-clicking items or reagents.
+## Author: Torhal
+## Version: @project-version@
+## X-Date: @project-date-iso@
+## X-Email: torhal-wow@googlegroups.com
+## X-Category: Professions
+## OptionalDeps: LibQTipClick-1.0
+
+## LoadManagers: AddonLoader
+## X-LoadOn-Always: Delayed
+
+Libs\LibStub\LibStub.lua
+
+#@no-lib-strip@
+embeds.xml
+#@end-no-lib-strip@
+
+Revelation.lua
