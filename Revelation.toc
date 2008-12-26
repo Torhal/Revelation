@@ -11,8 +11,6 @@
 ## LoadManagers: AddonLoader
 ## X-LoadOn-Always: Delayed
 
-Libs\LibStub\LibStub.lua
-
 #@no-lib-strip@
 embeds.xml
 #@end-no-lib-strip@
