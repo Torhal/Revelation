@@ -37,11 +37,11 @@ local EquipSlot = {
 -------------------------------------------------------------------------------
 -- Hooked functions
 -------------------------------------------------------------------------------
-local oldHandleModifiedItemClick = HandleModifiedItemClick
 local oldPaperDollItemSlotButton_OnModifiedClick = PaperDollItemSlotButton_OnModifiedClick
 
-function PaperDollItemSlotButton_OnModifiedClick (self, button)
+function PaperDollItemSlotButton_OnModifiedClick(...)
 	if IsAltKeyDown() then
+		local self, button = ...
 		local itemID = self:GetID()
 
 		PickupInventoryItem(itemID)
@@ -51,15 +51,11 @@ function PaperDollItemSlotButton_OnModifiedClick (self, button)
 		PickupInventoryItem(itemID)
 		Revelation:Menu(info2)
 	else
-		oldPaperDollItemSlotButton_OnModifiedClick(self, button)
+		oldPaperDollItemSlotButton_OnModifiedClick(...)
 	end
 end
 
-function HandleModifiedItemClick(...)
-	Revelation:Menu(...)
-	oldHandleModifiedItemClick(...)
-end
-
+hooksecurefunc("HandleModifiedItemClick", function(...) Revelation:Menu(...) end)
 getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("AnyUp")
 
 -------------------------------------------------------------------------------
