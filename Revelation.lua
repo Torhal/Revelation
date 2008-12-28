@@ -80,11 +80,7 @@ function Menu:Add(text, func, name, skillIndex, numAvailable)
 	local hasArrow = false
 	local sMenu = {}
 
-	if (self.data == nil) then
-		self.data = {
-			[name] = {}
-		}
-	end
+	if (self.data == nil) then self.data = {[name] = {}} end
 
 	if (numAvailable ~= nil) and (numAvailable >= 2) then
 		hasArrow = true
@@ -127,9 +123,7 @@ local function IsReagent(item, recipe)
 	local num = GetTradeSkillNumReagents(recipe)
 
 	for reagent = 1, num do
-		if item == GetTradeSkillReagentInfo(recipe, reagent) then
-			return true
-		end
+		if item == GetTradeSkillReagentInfo(recipe, reagent) then return true end
 	end
 	return false
 end
@@ -142,10 +136,7 @@ local function IterTrade(skillNum, reference, skillName, numAvailable, single)
 		 or (skillName == "Transmute: Primal Might"))) then
 		retval = reference
 
-		local func = function()
-				     DoTradeSkill(skillNum, 1)
-				     dewdrop:Close()
-			     end
+		local func = function() DoTradeSkill(skillNum, 1) dewdrop:Close() end
 
 		if single then
 			Menu:Add(skillName, func, reference, skillNum, 1)
@@ -173,8 +164,11 @@ local function IterEnchant(skillNum, reference, skillName, numAvailable, single)
 	return retval
 end
 
+local function PacifyATSW() if (ATSW_SkipSlowScan ~= nil) then ATSW_SkipSlowScan() end end
+
 local function Scan(tradeSkill, reference, single)
 	CastSpellByName(tradeSkill)
+	PacifyATSW()
 
 	local numSkills = GetNumTradeSkills()
 	local func
@@ -190,9 +184,7 @@ local function Scan(tradeSkill, reference, single)
 		local skillName, _, numAvailable, _ = GetTradeSkillInfo(i)
 		local retval = func(i, reference, skillName, numAvailable, single)
 
-		if (found == nil) then
-			found = retval
-		end
+		if (found == nil) then found = retval end
 	end
 
 	if (found ~= nil) then Menu:Parent(found) end
