@@ -150,22 +150,17 @@ local function IterEnchant(skillNum, reference, skillName, numAvailable, single)
 		local enchantType = strsub(skillName, 9, hyphen - 2)
 		if (enchantType == EquipSlot[reference]) then
 			retval = enchantType
-
-			local func = function() DoTradeSkill(skillNum, 1) dewdrop:Close() end
-
-			Menu:Add(skillName, func, enchantType, skillNum)
+			Menu:Add(skillName, function() DoTradeSkill(skillNum, 1) dewdrop:Close() end, enchantType, skillNum)
 		end
 	end
 	return retval
 end
 
-local function PacifyATSW() if (ATSW_SkipSlowScan ~= nil) then ATSW_SkipSlowScan() end end
-
 local function Scan(tradeSkill, reference, single)
 	CastSpellByName(tradeSkill)
-	PacifyATSW()
 
-	local numSkills = GetNumTradeSkills()
+	if (ATSW_SkipSlowScan ~= nil) then ATSW_SkipSlowScan() end
+
 	local func
 
 	if (tradeSkill == "Enchanting") and EquipSlot[reference] then
@@ -175,6 +170,8 @@ local function Scan(tradeSkill, reference, single)
 	end
 
 	local found
+	local numSkills = GetNumTradeSkills()
+
 	for i = 1, numSkills do
 		local skillName, _, numAvailable, _ = GetTradeSkillInfo(i)
 		local retval = func(i, reference, skillName, numAvailable, single)
