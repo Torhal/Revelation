@@ -57,9 +57,11 @@ end
 
 hooksecurefunc("ContainerFrameItemButton_OnModifiedClick",
 	       function(...)
-		       local self, button = ...
-		       local itemLink = GetContainerItemLink(self:GetParent():GetID(), self:GetID())
-		       Revelation:Menu(self, itemLink)
+		       if IsAltKeyDown() then 
+			       local self, button = ...
+			       local itemLink = GetContainerItemLink(self:GetParent():GetID(), self:GetID())
+			       Revelation:Menu(self, itemLink)
+		       end
 	       end
 )
 getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("AnyUp")
@@ -197,15 +199,8 @@ end
 -- Main AddOn functions
 -------------------------------------------------------------------------------
 function Revelation:Menu(focus, item)
-	if (not IsAltKeyDown()) or (item == nil) then return end
+	if (item == nil) then return end
 
-	local focusName = focus:GetName()
-
-	if (focusName == nil) or
-		((strfind(focusName, "Container") == nil) and (strfind(focusName, "TradeRecipient") == nil)
-		 and (strfind(focusName, "Slot") == nil)) then
-		return
-	end
 	SetDefaults()
 
 	local itemName, _, itemRarity, _, _, itemType, itemSubType, _, itemEquipLoc, _ = GetItemInfo(item)
