@@ -42,14 +42,7 @@ local oldPaperDollItemSlotButton_OnModifiedClick = PaperDollItemSlotButton_OnMod
 function PaperDollItemSlotButton_OnModifiedClick(...)
 	if IsAltKeyDown() then
 		local self, button = ...
-		local itemID = self:GetID()
-
-		PickupInventoryItem(itemID)
-
-		local infoType, info1, info2 = GetCursorInfo()
-
-		PickupInventoryItem(itemID)
-		Revelation:Menu(self, info2)
+		Revelation:Menu(self, GetInventoryItemLink("player", self:GetID()))
 	else
 		oldPaperDollItemSlotButton_OnModifiedClick(...)
 	end
@@ -57,11 +50,9 @@ end
 
 hooksecurefunc("ContainerFrameItemButton_OnModifiedClick",
 	       function(...)
-		       if IsAltKeyDown() then 
-			       local self, button = ...
-			       local itemLink = GetContainerItemLink(self:GetParent():GetID(), self:GetID())
-			       Revelation:Menu(self, itemLink)
-		       end
+		       if not IsAltKeyDown() then return end
+		       local self, button = ...
+		       Revelation:Menu(self, GetContainerItemLink(self:GetParent():GetID(), self:GetID()))
 	       end
 )
 getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("AnyUp")
