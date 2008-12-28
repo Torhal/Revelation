@@ -51,7 +51,7 @@ function PaperDollItemSlotButton_OnModifiedClick (self, button)
 		PickupInventoryItem(itemID)
 		Revelation:Menu(info2)
 	else
-		oldPaperDollItemSlotButton_OnClick(self, button)
+		oldPaperDollItemSlotButton_OnModifiedClick(self, button)
 	end
 end
 
