@@ -55,7 +55,13 @@ function PaperDollItemSlotButton_OnModifiedClick(...)
 	end
 end
 
-hooksecurefunc("HandleModifiedItemClick", function(...) Revelation:Menu(...) end)
+hooksecurefunc("ContainerFrameItemButton_OnModifiedClick",
+	       function(...)
+		       local self, button = ...
+		       local itemLink = GetContainerItemLink(self:GetParent():GetID(), self:GetID())
+		       Revelation:Menu(itemLink)
+	       end
+)
 getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("AnyUp")
 
 -------------------------------------------------------------------------------
