@@ -49,7 +49,7 @@ function PaperDollItemSlotButton_OnModifiedClick(...)
 		local infoType, info1, info2 = GetCursorInfo()
 
 		PickupInventoryItem(itemID)
-		Revelation:Menu(info2)
+		Revelation:Menu(self, info2)
 	else
 		oldPaperDollItemSlotButton_OnModifiedClick(...)
 	end
@@ -59,7 +59,7 @@ hooksecurefunc("ContainerFrameItemButton_OnModifiedClick",
 	       function(...)
 		       local self, button = ...
 		       local itemLink = GetContainerItemLink(self:GetParent():GetID(), self:GetID())
-		       Revelation:Menu(itemLink)
+		       Revelation:Menu(self, itemLink)
 	       end
 )
 getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("AnyUp")
@@ -196,10 +196,9 @@ end
 -------------------------------------------------------------------------------
 -- Main AddOn functions
 -------------------------------------------------------------------------------
-function Revelation:Menu(item)
+function Revelation:Menu(focus, item)
 	if (not IsAltKeyDown()) or (item == nil) then return end
 
-	local focus = GetMouseFocus()
 	local focusName = focus:GetName()
 
 	if (focusName == nil) or
