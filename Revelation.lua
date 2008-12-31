@@ -4,7 +4,6 @@
 local Revelation = {}
 _G["Revelation"] = Revelation
 
---local QTC = LibStub:GetLibrary("LibQTipClick-1.0")
 local dewdrop = AceLibrary("Dewdrop-2.0")
 
 -------------------------------------------------------------------------------
@@ -16,6 +15,7 @@ local strsub = string.sub
 -------------------------------------------------------------------------------
 -- Local constants and variables
 -------------------------------------------------------------------------------
+local isHandled = false		-- For HandleModifiedItemClick kludge...
 local Recipes
 local Menu = {}
 
@@ -38,28 +38,57 @@ local EquipSlot = {
 -- Hooked functions
 -------------------------------------------------------------------------------
 local oldPaperDollItemSlotButton_OnModifiedClick = PaperDollItemSlotButton_OnModifiedClick
+local oldHandleModifiedItemClick = HandleModifiedItemClick
+local oldContainerFrameItemButton_OnModifiedClick = ContainerFrameItemButton_OnModifiedClick
 
 function PaperDollItemSlotButton_OnModifiedClick(...)
-	if IsAltKeyDown() then
-		local self, button = ...
+	local self, button = ...
+	if IsAltKeyDown() and (button == "LeftButton") then
+		isHandled = true
 		Revelation:Menu(self, GetInventoryItemLink("player", self:GetID()))
+		isHandled = false
 	else
 		oldPaperDollItemSlotButton_OnModifiedClick(...)
 	end
 end
 
-hooksecurefunc("ContainerFrameItemButton_OnModifiedClick",
-	       function(...)
-		       if not IsAltKeyDown() then return end
-		       local self, button = ...
-		       Revelation:Menu(self, GetContainerItemLink(self:GetParent():GetID(), self:GetID()))
-	       end
-)
-getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("AnyUp")
+function ContainerFrameItemButton_OnModifiedClick(...)
+	local self, button = ...
+	if IsAltKeyDown() and (button == "LeftButton") then
+		isHandled = true
+		Revelation:Menu(self, GetContainerItemLink(self:GetParent():GetID(), self:GetID()))
+		isHandled = false
+	end
+	oldContainerFrameItemButton_OnModifiedClick(...)
+end
+
+-- This hook is required as it is the only way to reference TradeRecipientItem7ItemButton
+-- A.K.A.: "Will not be traded"
+function HandleModifiedItemClick(...)
+	if isHandled == false then
+		Revelation:Menu(nil, ...)
+	end
+	return oldHandleModifiedItemClick(...)
+end
+getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("LeftButtonUp")
 
 -------------------------------------------------------------------------------
 -- Local functions
 -------------------------------------------------------------------------------
+function IsValidFrame(frame)
+	local frameName = frame:GetName()
+
+	if (frameName == nil) then return false end
+	if (strfind(frameName, "Container") == nil) and
+		(strfind(frameName, "TradeRecipient") == nil) and
+		(strfind(frameName, "Slot") == nil) and
+		(strfind(frameName, "BagginsBag") == nil) and
+		(strfind(frameName, "BagnonBag") == nil) then
+		return false
+	end
+	return true
+end
+
 local function SetDefaults()
 	Menu.data = nil
 	Recipes = {
@@ -80,23 +109,17 @@ function Menu:Add(text, func, name, skillIndex, numAvailable)
 	if (numAvailable ~= nil) and (numAvailable >= 2) then
 		hasArrow = true
 
-		local sText = "All"
-		local sFunc = function() DoTradeSkill(skillIndex, numAvailable) dewdrop:Close() end
-		table.insert(sMenu, {text = sText, func = sFunc})
+		table.insert(sMenu, {text = "All", func = function() DoTradeSkill(skillIndex, numAvailable) dewdrop:Close() end})
 
 		local max = math.min(numAvailable, 20)
 
 		for i = 1, max do
-			sText = i
-			sFunc = function() DoTradeSkill(skillIndex, i) dewdrop:Close() end
-			table.insert(sMenu, {text = sText, func = sFunc})
+			table.insert(sMenu, {text = i, func = function() DoTradeSkill(skillIndex, i) dewdrop:Close() end})
 		end
 
 		if (numAvailable > 25) then
 			for i = 25, numAvailable, 5 do
-				sText = i
-				sFunc = function() DoTradeSkill(skillIndex, i) dewdrop:Close() end
-				table.insert(sMenu, {text = sText, func = sFunc})
+				table.insert(sMenu, {text = i, func = function() DoTradeSkill(skillIndex, i) dewdrop:Close() end})
 			end
 		end
 	end
@@ -148,7 +171,7 @@ local function IterEnchant(skillNum, reference, skillName, numAvailable, single)
 
 	if (hyphen ~= nil) and (numAvailable >= 1) then
 		local enchantType = strsub(skillName, 9, hyphen - 2)
-		if (enchantType == EquipSlot[reference]) then
+		if strfind(EquipSlot[reference], enchantType) then
 			retval = enchantType
 			Menu:Add(skillName, function() DoTradeSkill(skillNum, 1) dewdrop:Close() end, enchantType, skillNum)
 		end
@@ -188,7 +211,11 @@ end
 -------------------------------------------------------------------------------
 function Revelation:Menu(focus, item)
 	if (item == nil) then return end
-
+	if (focus == nil) then
+		if not AltKeyIsDown() then return end	-- Enforce for HandleModifiedItemClick
+		focus = GetMouseFocus()
+	end
+	if not IsValidFrame(focus) then	return end
 	SetDefaults()
 
 	local itemName, _, itemRarity, _, _, itemType, itemSubType, _, itemEquipLoc, _ = GetItemInfo(item)
