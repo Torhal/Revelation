@@ -70,7 +70,7 @@ function HandleModifiedItemClick(...)
 	end
 	return oldHandleModifiedItemClick(...)
 end
-getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("LeftButtonUp")
+getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("AnyUp")
 
 -------------------------------------------------------------------------------
 -- Local functions
