@@ -171,7 +171,7 @@ local function IterEnchant(skillNum, reference, skillName, numAvailable, single)
 
 	if (hyphen ~= nil) and (numAvailable >= 1) then
 		local enchantType = strsub(skillName, 9, hyphen - 2)
-		if strfind(EquipSlot[reference], enchantType) then
+		if strfind(enchantType, EquipSlot[reference]) then
 			retval = enchantType
 			Menu:Add(skillName, function() DoTradeSkill(skillNum, 1) dewdrop:Close() end, enchantType, skillNum)
 		end
