@@ -79,14 +79,12 @@ function IsValidFrame(frame)
 	local frameName = frame:GetName()
 
 	if (frameName == nil) then return false end
-	if (strfind(frameName, "Container") == nil) and
-		(strfind(frameName, "TradeRecipient") == nil) and
-		(strfind(frameName, "Slot") == nil) and
-		(strfind(frameName, "BagginsBag") == nil) and
-		(strfind(frameName, "BagnonBag") == nil) then
-		return false
-	end
-	return true
+	if (strfind(frameName, "Container") ~= nil) then return true end
+	if (strfind(frameName, "TradeRecipient") ~= nil) then return true end
+	if (strfind(frameName, "Slot") ~= nil) then return true end
+	if (strfind(frameName, "BagginsBag") ~= nil) then return true end
+	if (strfind(frameName, "BagnonBag") ~= nil) then return true end
+	return false
 end
 
 local function SetDefaults()
