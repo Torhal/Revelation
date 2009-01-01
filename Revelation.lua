@@ -210,7 +210,7 @@ end
 function Revelation:Menu(focus, item)
 	if (item == nil) then return end
 	if (focus == nil) then
-		if not AltKeyIsDown() then return end	-- Enforce for HandleModifiedItemClick
+		if not IsAltKeyDown() then return end	-- Enforce for HandleModifiedItemClick
 		focus = GetMouseFocus()
 	end
 	if not IsValidFrame(focus) then	return end
