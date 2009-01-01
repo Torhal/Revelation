@@ -103,17 +103,6 @@ local function IsValidFrame(frame)
 	return false
 end
 
-local function SetDefaults()
-	Menu.data = nil
-	Recipes = {
-		["Nothing"] = {
-			text = "Either no recipe or no reagents were found.",
-			func = function() dewdrop:Close() end,
-			hasArrow = false
-		}
-	}
-end
-
 function Menu:Add(text, func, name, skillIndex, numAvailable)
 	local hasArrow = false
 	local subMenu = {}
@@ -212,11 +201,9 @@ local function Scan(tradeSkill, reference, single)
 	if (ATSW_SkipSlowScan ~= nil) then ATSW_SkipSlowScan() end
 
 	local func = IterTrade
-	local tabName = reference
 
-	if (tradeSkill == "Enchanting") and EquipSlot[reference] then
+	if (tradeSkill == GetSpellInfo(7411)) and EquipSlot[reference] then
 		func = IterEnchant
-		tabName = EquipSlot[reference]
 	end
 
 	local found
@@ -244,18 +231,13 @@ end
 -- I robbed Ackis!
 local function GetKnown(ProfTable)
 	-- Reset the table, they may have unlearnt a profession
-	for i in pairs(ProfTable) do
-		ProfTable[i] = false
-	end
+	for i in pairs(ProfTable) do ProfTable[i] = false end
 
-	-- Scan through the spell book getting the spell names
+	-- Grab names from the spell book
 	for index = 1, 25, 1 do
 		local spellName = GetSpellName(index, BOOKTYPE_SPELL)
 
-		if (not spellName) or (index == 25) then
-			-- Nothing found
-			break
-		end
+		if (not spellName) or (index == 25) then break end
 
 		if (ProfTable[spellName] == false) then
 			ProfTable[spellName] = true
@@ -273,13 +255,23 @@ function Revelation:Menu(focus, item)
 		focus = GetMouseFocus()
 	end
 	if not IsValidFrame(focus) then	return end
-	SetDefaults()
+
+	Menu.data = nil
+	Recipes = {
+		["Nothing"] = {
+			text = "Either no recipe or no reagents were found.",
+			func = function() dewdrop:Close() end,
+			hasArrow = false
+		}
+	}
 	GetKnown(Professions)
 
 	local itemName, _, itemRarity, _, _, itemType, itemSubType, _, itemEquipLoc, _ = GetItemInfo(item)
 
 	if (itemType == "Armor") or (itemType == "Weapon") then
-		Scan("Enchanting", itemEquipLoc, true)
+		local ench = GetSpellInfo(7411)
+		if (Professions[ench] == false) then return end
+		Scan(ench, itemEquipLoc, true)
 	else
 		for key, val in pairs(Professions) do
 			if val == true then Scan(key, itemName)	end
