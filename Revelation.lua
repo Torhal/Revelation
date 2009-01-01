@@ -35,6 +35,21 @@ local EquipSlot = {
 	["INVTYPE_WEAPONOFFHAND"] =	"Weapon"						 
 }
 
+local Professions = {
+	[GetSpellInfo(2259)] = false, -- Alchemy
+	[GetSpellInfo(2018)] = false, -- Blacksmithing
+	[GetSpellInfo(2550)] = false, -- Cooking
+	[GetSpellInfo(7411)] = false, -- Enchanting
+	[GetSpellInfo(4036)] = false, -- Engineering
+	[GetSpellInfo(746)] = false, -- First Aid
+	[GetSpellInfo(2108)] = false, -- Leatherworking
+	[GetSpellInfo(2575)] = false, -- Smelting
+	[GetSpellInfo(3908)] = false, -- Tailoring
+	[GetSpellInfo(25229)] = false, -- Jewelcrafting
+	[GetSpellInfo(45357)] = false, -- Inscription
+	[GetSpellInfo(53428)] = false, -- Runeforging
+}
+
 -------------------------------------------------------------------------------
 -- Hooked functions
 -------------------------------------------------------------------------------
@@ -47,10 +62,10 @@ function PaperDollItemSlotButton_OnModifiedClick(...)
 	if IsAltKeyDown() and (button == "LeftButton") then
 		isHandled = true
 		Revelation:Menu(self, GetInventoryItemLink("player", self:GetID()))
-		isHandled = false
 	else
 		oldPaperDollItemSlotButton_OnModifiedClick(...)
 	end
+	isHandled = false
 end
 
 function ContainerFrameItemButton_OnModifiedClick(...)
@@ -58,9 +73,9 @@ function ContainerFrameItemButton_OnModifiedClick(...)
 	if IsAltKeyDown() and (button == "LeftButton") then
 		isHandled = true
 		Revelation:Menu(self, GetContainerItemLink(self:GetParent():GetID(), self:GetID()))
-		isHandled = false
 	end
 	oldContainerFrameItemButton_OnModifiedClick(...)
+	isHandled = false
 end
 
 -- This hook is required as it is the only way to reference TradeRecipientItem7ItemButton
@@ -76,7 +91,7 @@ getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("AnyUp")
 -------------------------------------------------------------------------------
 -- Local functions
 -------------------------------------------------------------------------------
-function IsValidFrame(frame)
+local function IsValidFrame(frame)
 	local frameName = frame:GetName()
 
 	if (frameName == nil) then return false end
@@ -101,24 +116,22 @@ end
 
 function Menu:Add(text, func, name, skillIndex, numAvailable)
 	local hasArrow = false
-	local sMenu = {}
-
-	if (self.data == nil) then self.data = {[name] = {}} end
+	local subMenu = {}
 
 	if (numAvailable ~= nil) and (numAvailable >= 2) then
 		hasArrow = true
 
-		tinsert(sMenu,
+		tinsert(subMenu,
 			{
 				text = "All",
 				func = function() DoTradeSkill(skillIndex, numAvailable) dewdrop:Close() end,
 				tooltipText = "Create every "..text.." you have reagents for."
 			})
 
-		local max = math.min(numAvailable, 20)
+		local max = math.min(numAvailable, 10)
 
 		for i = 1, max do
-			tinsert(sMenu,
+			tinsert(subMenu,
 				{
 					text = i,
 					func = function() DoTradeSkill(skillIndex, i) dewdrop:Close() end,
@@ -126,9 +139,9 @@ function Menu:Add(text, func, name, skillIndex, numAvailable)
 				})
 		end
 
-		if (numAvailable > 25) then
-			for i = 25, numAvailable, 5 do
-				tinsert(sMenu,
+		if (numAvailable > 15) then
+			for i = 15, numAvailable, 5 do
+				tinsert(subMenu,
 					{
 						text = i,
 						func = function() DoTradeSkill(skillIndex, i) dewdrop:Close() end,
@@ -138,25 +151,16 @@ function Menu:Add(text, func, name, skillIndex, numAvailable)
 		end
 	end
 
+	if (self.data == nil) or (self.data[name] == nil) then self.data = {[name] = {}} end
+
 	tinsert(self.data[name],
 		{
 			text = text,
 			func = func,
 			hasArrow = hasArrow,
 			tooltipText = GetTradeSkillDescription(skillIndex),
-			subMenu = sMenu
+			subMenu = subMenu
 		})
-end
-
-function Menu:Parent(name)
-	Recipes = {
-		[name] = {
-			text = name,
-			func = function() end,
-			hasArrow = true,
-			subMenu = self.data[name]
-		}
-	}
 end
 
 local function IsReagent(item, recipe)
@@ -193,7 +197,8 @@ local function IterEnchant(skillNum, reference, skillName, numAvailable, single)
 
 	if (hyphen ~= nil) and (numAvailable >= 1) then
 		local enchantType = strsub(skillName, 9, hyphen - 2)
-		if strfind(enchantType, EquipSlot[reference]) then
+		local equipRef = EquipSlot[reference]
+		if strfind(enchantType, equipRef) then
 			retval = enchantType
 			Menu:Add(skillName, function() DoTradeSkill(skillNum, 1) dewdrop:Close() end, enchantType, skillNum)
 		end
@@ -207,9 +212,11 @@ local function Scan(tradeSkill, reference, single)
 	if (ATSW_SkipSlowScan ~= nil) then ATSW_SkipSlowScan() end
 
 	local func = IterTrade
+	local tabName = reference
 
 	if (tradeSkill == "Enchanting") and EquipSlot[reference] then
 		func = IterEnchant
+		tabName = EquipSlot[reference]
 	end
 
 	local found
@@ -219,11 +226,41 @@ local function Scan(tradeSkill, reference, single)
 		local skillName, _, numAvailable, _ = GetTradeSkillInfo(i)
 		local retval = func(i, reference, skillName, numAvailable, single)
 
-		if (found == nil) then found = retval end
+		if (retval ~= nil) then
+			if Recipes["Nothing"] then
+				Recipes = {}
+			end
+			Recipes[retval] = {
+				text = retval,
+				func = function() end,
+				hasArrow = true,
+				subMenu = Menu.data[retval]
+			}
+		end
+	end
+	CloseTradeSkill()
+end
+
+-- I robbed Ackis!
+local function GetKnown(ProfTable)
+	-- Reset the table, they may have unlearnt a profession
+	for i in pairs(ProfTable) do
+		ProfTable[i] = false
 	end
 
-	if (found ~= nil) then Menu:Parent(found) end
-	CloseTradeSkill()
+	-- Scan through the spell book getting the spell names
+	for index = 1, 25, 1 do
+		local spellName = GetSpellName(index, BOOKTYPE_SPELL)
+
+		if (not spellName) or (index == 25) then
+			-- Nothing found
+			break
+		end
+
+		if (ProfTable[spellName] == false) then
+			ProfTable[spellName] = true
+		end
+	end
 end
 
 -------------------------------------------------------------------------------
@@ -237,59 +274,16 @@ function Revelation:Menu(focus, item)
 	end
 	if not IsValidFrame(focus) then	return end
 	SetDefaults()
+	GetKnown(Professions)
 
 	local itemName, _, itemRarity, _, _, itemType, itemSubType, _, itemEquipLoc, _ = GetItemInfo(item)
 
 	if (itemType == "Armor") or (itemType == "Weapon") then
 		Scan("Enchanting", itemEquipLoc, true)
-	elseif (itemType == "Gem") then
-		Scan("Jewelcrafting", itemName)
-	elseif (itemType == "Trade Goods") then
-		if (itemSubType == "Cloth") then
-			-- Check rarity for things like Spellcloth and Primal Mooncloth
-			if ((strsub(itemName, -6) == "Thread") or (strsub(itemName, 1, 4) == "Bolt") or
-			    (itemRarity >= 3)) then
-				Scan("Tailoring", itemName)
-			else
-				Scan("Tailoring", itemName)
---				Scan("First Aid", itemName)
-			end
-		elseif (itemSubType == "Devices") or (itemSubType == "Explosives") then
-			Scan("Engineering", itemName)
-		elseif (itemSubType == "Herb") or ((itemSubType == "Elemental") and (strsub(itemName, 1, 6) == "Primal")) then
-			Scan("Alchemy", itemName)
-		elseif (itemSubType == "Enchanting") then
-			Scan("Enchanting", itemName, true)
-		elseif (itemType == "Jewelcrafting") then
-			Scan("Jewelcrafting", itemName)
-		elseif (itemSubType == "Leather") then
-			Scan("Leatherworking", itemName)
-		elseif (itemSubType == "Meat") then
-			Scan("Cooking", itemName)
-		elseif (itemSubType == "Metal & Stone") then
-			if (strsub(itemName, -3) == "Bar") then
-				Scan("Blacksmithing", itemName)
-			elseif (strsub(itemName, -3) == "Ore") then
-				Scan("Smelting", itemName)
-			end
-		elseif (itemSubType == "Other") then
-			if (strsub(itemName, -9) == "Parchment") then
-				Scan("Inscription", itemName)
-			elseif (strsub(itemName, -7) == "Pigment") then
-				Scan("Inscription", itemName)
-			elseif (strsub(itemName, -6) == "Spices") then
-				Scan("Cooking", itemName)
-			elseif (strsub(itemName, -4) == "Vial") then
-				Scan("Alchemy", itemName)
-			end
-		elseif (itemSubType == "Parts") then
-			if (strsub(itemName, 1, 3) == "Ink") or (strsub(itemName, -3) == "Ink") then
-				Scan("Inscription", itemName)
-			else
-				Scan("Engineering", itemName)
-			end
+	else
+		for key, val in pairs(Professions) do
+			if val == true then Scan(key, itemName)	end
 		end
-
 	end
 	dewdrop:Open(focus, 'children', function() dewdrop:FeedTable(Recipes) end)
 end
