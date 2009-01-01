@@ -11,6 +11,7 @@ local dewdrop = AceLibrary("Dewdrop-2.0")
 -------------------------------------------------------------------------------
 local strfind = string.find
 local strsub = string.sub
+local tinsert = table.insert
 
 -------------------------------------------------------------------------------
 -- Local constants and variables
@@ -107,21 +108,44 @@ function Menu:Add(text, func, name, skillIndex, numAvailable)
 	if (numAvailable ~= nil) and (numAvailable >= 2) then
 		hasArrow = true
 
-		table.insert(sMenu, {text = "All", func = function() DoTradeSkill(skillIndex, numAvailable) dewdrop:Close() end})
+		tinsert(sMenu,
+			{
+				text = "All",
+				func = function() DoTradeSkill(skillIndex, numAvailable) dewdrop:Close() end,
+				tooltipText = "Create every "..text.." you have reagents for."
+			})
 
 		local max = math.min(numAvailable, 20)
 
 		for i = 1, max do
-			table.insert(sMenu, {text = i, func = function() DoTradeSkill(skillIndex, i) dewdrop:Close() end})
+			tinsert(sMenu,
+				{
+					text = i,
+					func = function() DoTradeSkill(skillIndex, i) dewdrop:Close() end,
+					tooltipText = "Create "..i.." of: "..text.."."
+				})
 		end
 
 		if (numAvailable > 25) then
 			for i = 25, numAvailable, 5 do
-				table.insert(sMenu, {text = i, func = function() DoTradeSkill(skillIndex, i) dewdrop:Close() end})
+				tinsert(sMenu,
+					{
+						text = i,
+						func = function() DoTradeSkill(skillIndex, i) dewdrop:Close() end,
+						tooltipText = "Create "..i.." of: "..text.."."
+					})
 			end
 		end
 	end
-	table.insert(self.data[name], {text = text, func = func, hasArrow = hasArrow, subMenu = sMenu})
+
+	tinsert(self.data[name],
+		{
+			text = text,
+			func = func,
+			hasArrow = hasArrow,
+			tooltipText = GetTradeSkillDescription(skillIndex),
+			subMenu = sMenu
+		})
 end
 
 function Menu:Parent(name)
@@ -182,12 +206,10 @@ local function Scan(tradeSkill, reference, single)
 
 	if (ATSW_SkipSlowScan ~= nil) then ATSW_SkipSlowScan() end
 
-	local func
+	local func = IterTrade
 
 	if (tradeSkill == "Enchanting") and EquipSlot[reference] then
 		func = IterEnchant
-	else
-		func = IterTrade
 	end
 
 	local found
