@@ -103,17 +103,21 @@ local function IsValidFrame(frame)
 	return false
 end
 
-function Menu:Add(text, func, name, skillIndex, numAvailable)
+function Menu:Add(tradeSkill, text, func, name, skillIndex, numAvailable)
 	local hasArrow = false
 	local subMenu = {}
 
 	if (numAvailable ~= nil) and (numAvailable >= 2) then
 		hasArrow = true
-
 		tinsert(subMenu,
 			{
 				text = "All",
-				func = function() DoTradeSkill(skillIndex, numAvailable) dewdrop:Close() end,
+				func = function()
+					       CastSpellByName(tradeSkill)
+					       CloseTradeSkill()
+					       DoTradeSkill(skillIndex, numAvailable)
+					       dewdrop:Close()
+				       end,
 				tooltipText = "Create every "..text.." you have reagents for."
 			})
 
@@ -123,7 +127,12 @@ function Menu:Add(text, func, name, skillIndex, numAvailable)
 			tinsert(subMenu,
 				{
 					text = i,
-					func = function() DoTradeSkill(skillIndex, i) dewdrop:Close() end,
+					func = function()
+						       CastSpellByName(tradeSkill)
+						       CloseTradeSkill()
+						       DoTradeSkill(skillIndex, i)
+						       dewdrop:Close()
+					       end,
 					tooltipText = "Create "..i.." of: "..text.."."
 				})
 		end
@@ -133,7 +142,12 @@ function Menu:Add(text, func, name, skillIndex, numAvailable)
 				tinsert(subMenu,
 					{
 						text = i,
-						func = function() DoTradeSkill(skillIndex, i) dewdrop:Close() end,
+						func = function()
+							       CastSpellByName(tradeSkill)
+							       CloseTradeSkill()
+							       DoTradeSkill(skillIndex, i)
+							       dewdrop:Close()
+						       end,
 						tooltipText = "Create "..i.." of: "..text.."."
 					})
 			end
@@ -161,26 +175,24 @@ local function IsReagent(item, recipe)
 	return false
 end
 
-local function IterTrade(skillNum, reference, skillName, numAvailable, single)
+local function IterTrade(tradeSkill, skillNum, reference, skillName, numAvailable, single)
 	local retval
 
-	if ((numAvailable >= 1)
-	    and (IsReagent(reference, skillNum)
-		 or (skillName == "Transmute: Primal Might"))) then
+	if ((numAvailable >= 1) and IsReagent(reference, skillNum)) then
 		retval = reference
 
 		local func = function() DoTradeSkill(skillNum, 1) dewdrop:Close() end
 
 		if single then
-			Menu:Add(skillName, func, reference, skillNum, 1)
+			Menu:Add(tradeSkill, skillName, func, reference, skillNum, 1)
 		else
-			Menu:Add(skillName, func, reference, skillNum, numAvailable)
+			Menu:Add(tradeSkill, skillName, func, reference, skillNum, numAvailable)
 		end
 	end
 	return retval
 end
 
-local function IterEnchant(skillNum, reference, skillName, numAvailable, single)
+local function IterEnchant(tradeSkill, skillNum, reference, skillName, numAvailable, single)
 	local hyphen = strfind(skillName, "-")
 	local retval
 
@@ -189,7 +201,7 @@ local function IterEnchant(skillNum, reference, skillName, numAvailable, single)
 		local equipRef = EquipSlot[reference]
 		if strfind(enchantType, equipRef) then
 			retval = enchantType
-			Menu:Add(skillName, function() DoTradeSkill(skillNum, 1) dewdrop:Close() end, enchantType, skillNum)
+			Menu:Add(tradeSkill, skillName, function() DoTradeSkill(skillNum, 1) dewdrop:Close() end, enchantType, skillNum)
 		end
 	end
 	return retval
@@ -197,7 +209,6 @@ end
 
 local function Scan(tradeSkill, reference, single)
 	CastSpellByName(tradeSkill)
-
 	if (ATSW_SkipSlowScan ~= nil) then ATSW_SkipSlowScan() end
 
 	local func = IterTrade
@@ -211,7 +222,7 @@ local function Scan(tradeSkill, reference, single)
 
 	for i = 1, numSkills do
 		local skillName, _, numAvailable, _ = GetTradeSkillInfo(i)
-		local retval = func(i, reference, skillName, numAvailable, single)
+		local retval = func(tradeSkill, i, reference, skillName, numAvailable, single)
 
 		if (retval ~= nil) then
 			if Recipes["Nothing"] then
