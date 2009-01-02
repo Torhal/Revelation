@@ -21,34 +21,36 @@ local Recipes
 local Menu = {}
 
 local EquipSlot = {
-	["INVTYPE_CHEST"] =		"Chest",
-	["INVTYPE_ROBE"] =		"Chest",
-	["INVTYPE_FEET"] =		"Boots",
-	["INVTYPE_WRIST"] =		"Bracer",
-	["INVTYPE_HAND"] =		"Gloves",
-	["INVTYPE_FINGER"] =		"Ring",
-	["INVTYPE_CLOAK"] =		"Cloak",
-	["INVTYPE_WEAPON"] =		"Weapon",
-	["INVTYPE_SHIELD"] =		"Shield",
-	["INVTYPE_2HWEAPON"] =		"2H Weapon",
-	["INVTYPE_WEAPONMAINHAND"] =	"Weapon",
-	["INVTYPE_WEAPONOFFHAND"] =	"Weapon"						 
+	["INVTYPE_CHEST"]		= "Chest",
+	["INVTYPE_ROBE"]		= "Chest",
+	["INVTYPE_FEET"]		= "Boots",
+	["INVTYPE_WRIST"]		= "Bracer",
+	["INVTYPE_HAND"]		= "Gloves",
+	["INVTYPE_FINGER"]		= "Ring",
+	["INVTYPE_CLOAK"]		= "Cloak",
+	["INVTYPE_WEAPON"]		= "Weapon",
+	["INVTYPE_SHIELD"]		= "Shield",
+	["INVTYPE_2HWEAPON"]		= "2H Weapon",
+	["INVTYPE_WEAPONMAINHAND"]	= "Weapon",
+	["INVTYPE_WEAPONOFFHAND"]	= "Weapon"
 }
 
 local Professions = {
-	[GetSpellInfo(2259)] = false, -- Alchemy
-	[GetSpellInfo(2018)] = false, -- Blacksmithing
-	[GetSpellInfo(2550)] = false, -- Cooking
-	[GetSpellInfo(7411)] = false, -- Enchanting
-	[GetSpellInfo(4036)] = false, -- Engineering
-	[GetSpellInfo(746)] = false, -- First Aid
-	[GetSpellInfo(2108)] = false, -- Leatherworking
-	[GetSpellInfo(2575)] = false, -- Smelting
-	[GetSpellInfo(3908)] = false, -- Tailoring
-	[GetSpellInfo(25229)] = false, -- Jewelcrafting
-	[GetSpellInfo(45357)] = false, -- Inscription
-	[GetSpellInfo(53428)] = false, -- Runeforging
+	[GetSpellInfo(2259)]	= false, -- Alchemy
+	[GetSpellInfo(2018)]	= false, -- Blacksmithing
+	[GetSpellInfo(2550)]	= false, -- Cooking
+	[GetSpellInfo(7411)]	= false, -- Enchanting
+	[GetSpellInfo(4036)]	= false, -- Engineering
+	[GetSpellInfo(746)]	= false, -- First Aid
+	[GetSpellInfo(2108)]	= false, -- Leatherworking
+	[GetSpellInfo(2575)]	= false, -- Smelting
+	[GetSpellInfo(3908)]	= false, -- Tailoring
+	[GetSpellInfo(25229)]	= false, -- Jewelcrafting
+	[GetSpellInfo(45357)]	= false, -- Inscription
+	[GetSpellInfo(53428)]	= false, -- Runeforging
 }
+
+local validFrames = {"Container", "TradeRecipient", "Slot", "BagginsBag", "BagnonBag"}
 
 -------------------------------------------------------------------------------
 -- Hooked functions
@@ -95,11 +97,10 @@ local function IsValidFrame(frame)
 	local frameName = frame:GetName()
 
 	if (frameName == nil) then return false end
-	if (strfind(frameName, "Container") ~= nil) then return true end
-	if (strfind(frameName, "TradeRecipient") ~= nil) then return true end
-	if (strfind(frameName, "Slot") ~= nil) then return true end
-	if (strfind(frameName, "BagginsBag") ~= nil) then return true end
-	if (strfind(frameName, "BagnonBag") ~= nil) then return true end
+
+	for k, v in ipairs(validFrames) do
+		if (strfind(frameName, v) ~= nil) then return true end
+	end
 	return false
 end
 
@@ -154,16 +155,15 @@ function Menu:Add(tradeSkill, text, func, name, skillIndex, numAvailable)
 		end
 	end
 
-	if (self.data == nil) or (self.data[name] == nil) then self.data = {[name] = {}} end
+	if Recipes["Nothing"] then Recipes["Nothing"] = nil end
 
-	tinsert(self.data[name],
-		{
-			text = text,
-			func = func,
-			hasArrow = hasArrow,
-			tooltipText = GetTradeSkillDescription(skillIndex),
-			subMenu = subMenu
-		})
+	Recipes[text] =	{
+		text = text,
+		func = func,
+		hasArrow = hasArrow,
+		tooltipText = GetTradeSkillDescription(skillIndex),
+		subMenu = subMenu
+	}
 end
 
 local function IsReagent(item, recipe)
@@ -176,11 +176,7 @@ local function IsReagent(item, recipe)
 end
 
 local function IterTrade(tradeSkill, skillNum, reference, skillName, numAvailable, single)
-	local retval
-
 	if ((numAvailable >= 1) and IsReagent(reference, skillNum)) then
-		retval = reference
-
 		local func = function() DoTradeSkill(skillNum, 1) dewdrop:Close() end
 
 		if single then
@@ -189,22 +185,18 @@ local function IterTrade(tradeSkill, skillNum, reference, skillName, numAvailabl
 			Menu:Add(tradeSkill, skillName, func, reference, skillNum, numAvailable)
 		end
 	end
-	return retval
 end
 
 local function IterEnchant(tradeSkill, skillNum, reference, skillName, numAvailable, single)
 	local hyphen = strfind(skillName, "-")
-	local retval
 
 	if (hyphen ~= nil) and (numAvailable >= 1) then
 		local enchantType = strsub(skillName, 9, hyphen - 2)
 		local equipRef = EquipSlot[reference]
 		if strfind(enchantType, equipRef) then
-			retval = enchantType
 			Menu:Add(tradeSkill, skillName, function() DoTradeSkill(skillNum, 1) dewdrop:Close() end, enchantType, skillNum)
 		end
 	end
-	return retval
 end
 
 local function Scan(tradeSkill, reference, single)
@@ -222,19 +214,7 @@ local function Scan(tradeSkill, reference, single)
 
 	for i = 1, numSkills do
 		local skillName, _, numAvailable, _ = GetTradeSkillInfo(i)
-		local retval = func(tradeSkill, i, reference, skillName, numAvailable, single)
-
-		if (retval ~= nil) then
-			if Recipes["Nothing"] then
-				Recipes = {}
-			end
-			Recipes[retval] = {
-				text = retval,
-				func = function() end,
-				hasArrow = true,
-				subMenu = Menu.data[retval]
-			}
-		end
+		func(tradeSkill, i, reference, skillName, numAvailable, single)
 	end
 	CloseTradeSkill()
 end
