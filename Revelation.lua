@@ -59,8 +59,8 @@ local oldContainerFrameItemButton_OnModifiedClick = ContainerFrameItemButton_OnM
 
 function PaperDollItemSlotButton_OnModifiedClick(...)
 	local self, button = ...
+	isHandled = true
 	if IsAltKeyDown() and (button == "LeftButton") then
-		isHandled = true
 		Revelation:Menu(self, GetInventoryItemLink("player", self:GetID()))
 	else
 		oldPaperDollItemSlotButton_OnModifiedClick(...)
@@ -70,8 +70,8 @@ end
 
 function ContainerFrameItemButton_OnModifiedClick(...)
 	local self, button = ...
+	isHandled = true
 	if IsAltKeyDown() and (button == "LeftButton") then
-		isHandled = true
 		Revelation:Menu(self, GetContainerItemLink(self:GetParent():GetID(), self:GetID()))
 	end
 	oldContainerFrameItemButton_OnModifiedClick(...)
