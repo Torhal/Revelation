@@ -6,7 +6,7 @@
 ## X-Date: @project-date-iso@
 ## X-Email: torhal-wow@googlegroups.com
 ## X-Category: Professions
-## OptionalDeps: LibQTipClick-1.0
+## OptionalDeps: AceLibrary, Dewdrop-2.0
 
 ## LoadManagers: AddonLoader
 ## X-LoadOn-Always: Delayed
