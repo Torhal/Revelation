@@ -1,17 +1,18 @@
 -------------------------------------------------------------------------------
+-- Localized globals
+-------------------------------------------------------------------------------
+local _G = getfenv(0)
+local strfind = string.find
+local strsub = string.sub
+local tinsert = table.insert
+
+-------------------------------------------------------------------------------
 -- AddOn namespace
 -------------------------------------------------------------------------------
 local Revelation = {}
 _G["Revelation"] = Revelation
 
 local dewdrop = AceLibrary("Dewdrop-2.0")
-
--------------------------------------------------------------------------------
--- Localized globals
--------------------------------------------------------------------------------
-local strfind = string.find
-local strsub = string.sub
-local tinsert = table.insert
 
 -------------------------------------------------------------------------------
 -- Local constants and variables
@@ -50,43 +51,42 @@ local Professions = {
 	[GetSpellInfo(53428)]	= false, -- Runeforging
 }
 
-local validFrames = {"Container", "TradeRecipient", "Slot", "BagginsBag", "BagnonBag"}
+local validFrames = {"Container", "TradeRecipient", "Slot", "BagginsBag", "BagnonItem", "OneBagFrame"}
 
 -------------------------------------------------------------------------------
 -- Hooked functions
 -------------------------------------------------------------------------------
-local oldPaperDollItemSlotButton_OnModifiedClick = PaperDollItemSlotButton_OnModifiedClick
-local oldHandleModifiedItemClick = HandleModifiedItemClick
-local oldContainerFrameItemButton_OnModifiedClick = ContainerFrameItemButton_OnModifiedClick
-
+local _PaperDollItemSlotButton_OnModifiedClick = PaperDollItemSlotButton_OnModifiedClick
 function PaperDollItemSlotButton_OnModifiedClick(...)
 	local self, button = ...
 	isHandled = true
 	if IsAltKeyDown() and (button == "LeftButton") then
 		Revelation:Menu(self, GetInventoryItemLink("player", self:GetID()))
 	else
-		oldPaperDollItemSlotButton_OnModifiedClick(...)
+		_PaperDollItemSlotButton_OnModifiedClick(...)
 	end
 	isHandled = false
 end
 
+local _ContainerFrameItemButton_OnModifiedClick = ContainerFrameItemButton_OnModifiedClick
 function ContainerFrameItemButton_OnModifiedClick(...)
 	local self, button = ...
 	isHandled = true
 	if IsAltKeyDown() and (button == "LeftButton") then
 		Revelation:Menu(self, GetContainerItemLink(self:GetParent():GetID(), self:GetID()))
 	end
-	oldContainerFrameItemButton_OnModifiedClick(...)
+	_ContainerFrameItemButton_OnModifiedClick(...)
 	isHandled = false
 end
 
 -- This hook is required as it is the only way to reference TradeRecipientItem7ItemButton
 -- A.K.A.: "Will not be traded"
+local _HandleModifiedItemClick = HandleModifiedItemClick
 function HandleModifiedItemClick(...)
 	if isHandled == false then
 		Revelation:Menu(nil, ...)
 	end
-	return oldHandleModifiedItemClick(...)
+	return _HandleModifiedItemClick(...)
 end
 getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("AnyUp")
 
@@ -104,24 +104,28 @@ local function IsValidFrame(frame)
 	return false
 end
 
-function Menu:Add(tradeSkill, text, func, name, skillIndex, numAvailable)
+local function SetTradeSkill(tradeSkill)
+	CastSpellByName(tradeSkill)
+	CloseTradeSkill()
+end
+
+function Menu:Add(tradeSkill, text, func, skillIndex, numAvailable)
 	local hasArrow = false
 	local subMenu = {}
 
-	if (numAvailable ~= nil) and (numAvailable >= 2) then
+	if (numAvailable ~= nil) and (numAvailable > 1) then
 		hasArrow = true
 		tinsert(subMenu,
 			{
 				text = "All",
 				func = function()
-					       CastSpellByName(tradeSkill)
-					       CloseTradeSkill()
+					       SetTradeSkill(tradeSkill)
 					       DoTradeSkill(skillIndex, numAvailable)
 					       dewdrop:Close()
 				       end,
 				tooltipText = "Create every "..text.." you have reagents for."
-			})
-
+			}
+		)
 		local max = math.min(numAvailable, 10)
 
 		for i = 1, max do
@@ -129,13 +133,13 @@ function Menu:Add(tradeSkill, text, func, name, skillIndex, numAvailable)
 				{
 					text = i,
 					func = function()
-						       CastSpellByName(tradeSkill)
-						       CloseTradeSkill()
+						       SetTradeSkill(tradeSkill)
 						       DoTradeSkill(skillIndex, i)
 						       dewdrop:Close()
 					       end,
 					tooltipText = "Create "..i.." of: "..text.."."
-				})
+				}
+			)
 		end
 
 		if (numAvailable > 15) then
@@ -144,13 +148,13 @@ function Menu:Add(tradeSkill, text, func, name, skillIndex, numAvailable)
 					{
 						text = i,
 						func = function()
-							       CastSpellByName(tradeSkill)
-							       CloseTradeSkill()
+							       SetTradeSkill(tradeSkill)
 							       DoTradeSkill(skillIndex, i)
 							       dewdrop:Close()
 						       end,
 						tooltipText = "Create "..i.." of: "..text.."."
-					})
+					}
+				)
 			end
 		end
 	end
@@ -176,26 +180,33 @@ local function IsReagent(item, recipe)
 end
 
 local function IterTrade(tradeSkill, skillNum, reference, skillName, numAvailable, single)
-	if ((numAvailable >= 1) and IsReagent(reference, skillNum)) then
-		local func = function() DoTradeSkill(skillNum, 1) dewdrop:Close() end
+	if (numAvailable < 1) or (not IsReagent(reference, skillNum)) then return end
+	local func = function()
+			     SetTradeSkill(tradeSkill)
+			     DoTradeSkill(skillNum, 1)
+			     dewdrop:Close()
+		     end
 
-		if single then
-			Menu:Add(tradeSkill, skillName, func, reference, skillNum, 1)
-		else
-			Menu:Add(tradeSkill, skillName, func, reference, skillNum, numAvailable)
-		end
+	if single then
+		Menu:Add(tradeSkill, skillName, func, skillNum, 1)
+	else
+		Menu:Add(tradeSkill, skillName, func, skillNum, numAvailable)
 	end
 end
 
 local function IterEnchant(tradeSkill, skillNum, reference, skillName, numAvailable, single)
 	local hyphen = strfind(skillName, "-")
 
-	if (hyphen ~= nil) and (numAvailable >= 1) then
-		local enchantType = strsub(skillName, 9, hyphen - 2)
-		local equipRef = EquipSlot[reference]
-		if strfind(enchantType, equipRef) then
-			Menu:Add(tradeSkill, skillName, function() DoTradeSkill(skillNum, 1) dewdrop:Close() end, enchantType, skillNum)
-		end
+	if (hyphen == nil) or (numAvailable < 1) then return end
+	local enchantType = strsub(skillName, 9, hyphen - 2)
+
+	if strfind(enchantType, EquipSlot[reference]) then
+		local func = function()
+				     SetTradeSkill(tradeSkill)
+				     DoTradeSkill(skillNum, 1)
+				     dewdrop:Close()
+			     end
+		Menu:Add(tradeSkill, skillName, func, skillNum)
 	end
 end
 
@@ -205,9 +216,7 @@ local function Scan(tradeSkill, reference, single)
 
 	local func = IterTrade
 
-	if (tradeSkill == GetSpellInfo(7411)) and EquipSlot[reference] then
-		func = IterEnchant
-	end
+	if (tradeSkill == GetSpellInfo(7411)) and EquipSlot[reference] then func = IterEnchant end
 
 	local found
 	local numSkills = GetNumTradeSkills()
@@ -247,7 +256,6 @@ function Revelation:Menu(focus, item)
 	end
 	if not IsValidFrame(focus) then	return end
 
-	Menu.data = nil
 	Recipes = {
 		["Nothing"] = {
 			text = "Either no recipe or no reagents were found.",
