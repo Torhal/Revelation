@@ -1,6 +1,9 @@
 package-as: Revelation
 
 externals:
+    Libs/Dewdrop-2.0/AceLibrary:
+      url: svn://svn.wowace.com/wow/ace2/mainline/trunk/AceLibrary
+      tag: latest
     Libs/Dewdrop-2.0:
       url: svn://svn.wowace.com/wow/dewdroplib/mainline/trunk/Dewdrop-2.0
       tag: latest
