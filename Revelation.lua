@@ -51,8 +51,6 @@ local Professions = {
 	[GetSpellInfo(53428)]	= false, -- Runeforging
 }
 
-local validFrames = {"Container", "TradeRecipient", "Slot", "BagginsBag", "BagnonItem", "OneBagFrame"}
-
 -------------------------------------------------------------------------------
 -- Hooked functions
 -------------------------------------------------------------------------------
@@ -93,17 +91,6 @@ getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("AnyUp")
 -------------------------------------------------------------------------------
 -- Local functions
 -------------------------------------------------------------------------------
-local function IsValidFrame(frame)
-	local frameName = frame:GetName()
-
-	if (frameName == nil) then return false end
-
-	for k, v in ipairs(validFrames) do
-		if (strfind(frameName, v) ~= nil) then return true end
-	end
-	return false
-end
-
 local function SetTradeSkill(tradeSkill)
 	CastSpellByName(tradeSkill)
 	CloseTradeSkill()
@@ -254,7 +241,6 @@ function Revelation:Menu(focus, item)
 		if not IsAltKeyDown() then return end	-- Enforce for HandleModifiedItemClick
 		focus = GetMouseFocus()
 	end
-	if not IsValidFrame(focus) then	return end
 
 	Recipes = {
 		["Nothing"] = {
