@@ -7,20 +7,8 @@ local strsub = string.sub
 local tinsert = table.insert
 
 -------------------------------------------------------------------------------
--- AddOn namespace
+-- Constants
 -------------------------------------------------------------------------------
-local Revelation = {}
-_G["Revelation"] = Revelation
-
-local dewdrop = AceLibrary("Dewdrop-2.0")
-
--------------------------------------------------------------------------------
--- Local constants and variables
--------------------------------------------------------------------------------
-local isHandled = false		-- For HandleModifiedItemClick kludge...
-local Recipes
-local Menu = {}
-
 local EquipSlot = {
 	["INVTYPE_CHEST"]		= "Chest",
 	["INVTYPE_ROBE"]		= "Chest",
@@ -52,41 +40,17 @@ local Professions = {
 }
 
 -------------------------------------------------------------------------------
--- Hooked functions
+-- Variables
 -------------------------------------------------------------------------------
-local _PaperDollItemSlotButton_OnModifiedClick = PaperDollItemSlotButton_OnModifiedClick
-function PaperDollItemSlotButton_OnModifiedClick(...)
-	local self, button = ...
-	isHandled = true
-	if IsAltKeyDown() and (button == "LeftButton") then
-		Revelation:Menu(self, GetInventoryItemLink("player", self:GetID()))
-	else
-		_PaperDollItemSlotButton_OnModifiedClick(...)
-	end
-	isHandled = false
-end
+local isHandled = false		-- For HandleModifiedItemClick kludge...
+local recipes
 
-local _ContainerFrameItemButton_OnModifiedClick = ContainerFrameItemButton_OnModifiedClick
-function ContainerFrameItemButton_OnModifiedClick(...)
-	local self, button = ...
-	isHandled = true
-	if IsAltKeyDown() and (button == "LeftButton") then
-		Revelation:Menu(self, GetContainerItemLink(self:GetParent():GetID(), self:GetID()))
-	end
-	_ContainerFrameItemButton_OnModifiedClick(...)
-	isHandled = false
-end
-
--- This hook is required as it is the only way to reference TradeRecipientItem7ItemButton
--- A.K.A.: "Will not be traded"
-local _HandleModifiedItemClick = HandleModifiedItemClick
-function HandleModifiedItemClick(...)
-	if isHandled == false then
-		Revelation:Menu(nil, ...)
-	end
-	return _HandleModifiedItemClick(...)
-end
-getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("AnyUp")
+-------------------------------------------------------------------------------
+-- AddOn namespace
+-------------------------------------------------------------------------------
+local dewdrop = AceLibrary("Dewdrop-2.0")
+local AceAddon = LibStub("AceAddon-3.0")
+Revelation = AceAddon:NewAddon("Revelation", "AceHook-3.0")
 
 -------------------------------------------------------------------------------
 -- Local functions
@@ -96,7 +60,7 @@ local function SetTradeSkill(tradeSkill)
 	CloseTradeSkill()
 end
 
-function Menu:Add(tradeSkill, text, func, skillIndex, numAvailable)
+function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 	local hasArrow = false
 	local subMenu = {}
 
@@ -146,9 +110,9 @@ function Menu:Add(tradeSkill, text, func, skillIndex, numAvailable)
 		end
 	end
 
-	if Recipes["Nothing"] then Recipes["Nothing"] = nil end
+	if recipes["Nothing"] then recipes["Nothing"] = nil end
 
-	Recipes[text] =	{
+	recipes[text] =	{
 		text = text,
 		func = func,
 		hasArrow = hasArrow,
@@ -175,9 +139,9 @@ local function IterTrade(tradeSkill, skillNum, reference, skillName, numAvailabl
 		     end
 
 	if single then
-		Menu:Add(tradeSkill, skillName, func, skillNum, 1)
+		AddRecipe(tradeSkill, skillName, func, skillNum, 1)
 	else
-		Menu:Add(tradeSkill, skillName, func, skillNum, numAvailable)
+		AddRecipe(tradeSkill, skillName, func, skillNum, numAvailable)
 	end
 end
 
@@ -193,7 +157,7 @@ local function IterEnchant(tradeSkill, skillNum, reference, skillName, numAvaila
 				     DoTradeSkill(skillNum, 1)
 				     dewdrop:Close()
 			     end
-		Menu:Add(tradeSkill, skillName, func, skillNum)
+		AddRecipe(tradeSkill, skillName, func, skillNum)
 	end
 end
 
@@ -235,6 +199,19 @@ end
 -------------------------------------------------------------------------------
 -- Main AddOn functions
 -------------------------------------------------------------------------------
+function Revelation:OnInitialize()
+end
+
+function Revelation:OnEnable()
+	self:RawHook("PaperDollItemSlotButton_OnModifiedClick", true)
+	self:RawHook("ContainerFrameItemButton_OnModifiedClick", true)
+	self:RawHook("HandleModifiedItemClick", true)
+end
+
+function Revelation:OnDisable()
+	self:UnhookAll()
+end
+
 function Revelation:Menu(focus, item)
 	if (item == nil) then return end
 	if (focus == nil) then
@@ -242,7 +219,7 @@ function Revelation:Menu(focus, item)
 		focus = GetMouseFocus()
 	end
 
-	Recipes = {
+	recipes = {
 		["Nothing"] = {
 			text = "Either no recipe or no reagents were found.",
 			func = function() dewdrop:Close() end,
@@ -262,5 +239,39 @@ function Revelation:Menu(focus, item)
 			if val == true then Scan(key, itemName)	end
 		end
 	end
-	dewdrop:Open(focus, 'children', function() dewdrop:FeedTable(Recipes) end)
+	dewdrop:Open(focus, 'children', function() dewdrop:FeedTable(recipes) end)
 end
+
+-------------------------------------------------------------------------------
+-- Hooked functions
+-------------------------------------------------------------------------------
+function Revelation:PaperDollItemSlotButton_OnModifiedClick(...)
+	local hookSelf, button = ...
+	isHandled = true
+	if IsAltKeyDown() and (button == "LeftButton") then
+		self:Menu(hookSelf, GetInventoryItemLink("player", hookSelf:GetID()))
+	else
+		self.hooks.PaperDollItemSlotButton_OnModifiedClick(...)
+	end
+	isHandled = false
+end
+
+function Revelation:ContainerFrameItemButton_OnModifiedClick(...)
+	local hookSelf, button = ...
+	isHandled = true
+	if IsAltKeyDown() and (button == "LeftButton") then
+		self:Menu(hookSelf, GetContainerItemLink(hookSelf:GetParent():GetID(), hookSelf:GetID()))
+	end
+	self.hooks.ContainerFrameItemButton_OnModifiedClick(...)
+	isHandled = false
+end
+
+-- This hook is required as it is the only way to reference TradeRecipientItem7ItemButton
+-- A.K.A.: "Will not be traded"
+function Revelation:HandleModifiedItemClick(...)
+	if isHandled == false then
+		self:Menu(nil, ...)
+	end
+	return self.hooks.HandleModifiedItemClick(...)
+end
+getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("AnyUp")

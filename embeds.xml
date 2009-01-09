@@ -1,5 +1,9 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
- ..\FrameXML\UI.xsd">
+..\FrameXML\UI.xsd">
+	<!--@no-lib-strip@-->
+	<Include file="Libs\AceAddon-3.0\AceAddon-3.0.xml"/>
+	<Include file="Libs\AceHook-3.0\AceHook-3.0.xml"/>
 	<Script file="Libs\Dewdrop-2.0\AceLibrary\AceLibrary.lua"/>
 	<Script file="Libs\Dewdrop-2.0\Dewdrop-2.0.lua"/>
+	<!--@end-no-lib-strip@-->
 </Ui>
