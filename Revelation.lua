@@ -2,9 +2,7 @@
 -- Localized globals
 -------------------------------------------------------------------------------
 local _G = getfenv(0)
-local strfind = string.find
-local strsub = string.sub
-local tinsert = table.insert
+local strfind, strsub, tinsert = _G.string.find, _G.string.sub, _G.table.insert
 
 -------------------------------------------------------------------------------
 -- Constants
@@ -39,6 +37,14 @@ local Professions = {
 	[GetSpellInfo(53428)]	= false, -- Runeforging
 }
 
+local Difficulty = {
+	["trivial"]	= '|cff777777',
+	["easy"]	= '|cff33bb33',
+	["medium"]	= '|cffffff00',
+	["optimal"]	= '|cffff7733',
+	["difficult"]	= '|cffffffff',
+}
+
 -------------------------------------------------------------------------------
 -- Variables
 -------------------------------------------------------------------------------
@@ -60,7 +66,7 @@ local function SetTradeSkill(tradeSkill)
 	CloseTradeSkill()
 end
 
-function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
+local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 	local hasArrow = false
 	local subMenu = {}
 
@@ -169,12 +175,13 @@ local function Scan(tradeSkill, reference, single)
 
 	if (tradeSkill == GetSpellInfo(7411)) and EquipSlot[reference] then func = IterEnchant end
 
-	local found
 	local numSkills = GetNumTradeSkills()
 
 	for i = 1, numSkills do
-		local skillName, _, numAvailable, _ = GetTradeSkillInfo(i)
-		func(tradeSkill, i, reference, skillName, numAvailable, single)
+		local skillName, skillType, numAvailable, _ = GetTradeSkillInfo(i)
+		if skillType ~= "header" then 
+			func(tradeSkill, i, reference, Difficulty[skillType]..skillName.."|r", numAvailable, single)
+		end
 	end
 	CloseTradeSkill()
 end
