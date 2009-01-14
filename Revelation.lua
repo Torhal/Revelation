@@ -49,7 +49,9 @@ local Difficulty = {
 -- Variables
 -------------------------------------------------------------------------------
 local isHandled = false		-- For HandleModifiedItemClick kludge...
-local recipes
+local recipes = {}
+local subMenu = {}
+local valNames = {}
 
 -------------------------------------------------------------------------------
 -- AddOn namespace
@@ -68,7 +70,7 @@ end
 
 local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 	local hasArrow = false
-	local subMenu = {}
+	wipe(subMenu)
 
 	if (numAvailable ~= nil) and (numAvailable > 1) then
 		hasArrow = true
@@ -116,7 +118,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 		end
 	end
 
-	if recipes["Nothing"] then recipes["Nothing"] = nil end
+	if recipes["Nothing"] then wipe(recipes) end
 
 --	local itemLink = GetTradeSkillItemLink(skillIndex)
 
@@ -188,11 +190,11 @@ local function Scan(tradeSkill, reference, single)
 	for i = 1, GetNumTradeSkills() do
 		local skillName, skillType, numAvailable, _ = GetTradeSkillInfo(i)
 		if skillType ~= "header" then
-			local names = {
+			valNames = {
 				["normal"] = skillName,
 				["color"] = Difficulty[skillType]..skillName.."|r"
 			}
-			func(tradeSkill, i, reference, names, numAvailable, single)
+			func(tradeSkill, i, reference, valNames, numAvailable, single)
 		end
 	end
 	CloseTradeSkill()
