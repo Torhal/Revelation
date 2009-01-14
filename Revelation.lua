@@ -72,7 +72,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 	local hasArrow = false
 	wipe(subMenu)
 
-	if (numAvailable ~= nil) and (numAvailable > 1) then
+	if (tradeSkill ~= GetSpellInfo(7411)) and (numAvailable > 1) then
 		hasArrow = true
 		tinsert(subMenu,
 			{
@@ -176,7 +176,7 @@ local function IterEnchant(tradeSkill, skillNum, reference, skillName, numAvaila
 			     DoTradeSkill(skillNum, 1)
 			     dewdrop:Close()
 		     end
-	AddRecipe(tradeSkill, skillName.color, func, skillNum)
+	AddRecipe(tradeSkill, skillName.color, func, skillNum, 1)
 end
 
 local function Scan(tradeSkill, reference, single)
@@ -190,10 +190,8 @@ local function Scan(tradeSkill, reference, single)
 	for i = 1, GetNumTradeSkills() do
 		local skillName, skillType, numAvailable, _ = GetTradeSkillInfo(i)
 		if skillType ~= "header" then
-			valNames = {
-				["normal"] = skillName,
-				["color"] = Difficulty[skillType]..skillName.."|r"
-			}
+			valNames.normal = skillName
+			valNames.color = Difficulty[skillType]..skillName.."|r"
 			func(tradeSkill, i, reference, valNames, numAvailable, single)
 		end
 	end
@@ -249,7 +247,7 @@ function Revelation:Menu(focus, item)
 	}
 	GetKnown(Professions)
 
-	local itemName, _, itemRarity, _, _, itemType, itemSubType, _, itemEquipLoc, _ = GetItemInfo(item)
+	local itemName, _, _, _, _, itemType, _, _, itemEquipLoc, _ = GetItemInfo(item)
 
 	if (itemType == "Armor") or (itemType == "Weapon") then
 		local ench = GetSpellInfo(7411)
