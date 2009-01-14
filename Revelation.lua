@@ -50,7 +50,6 @@ local Difficulty = {
 -------------------------------------------------------------------------------
 local isHandled = false		-- For HandleModifiedItemClick kludge...
 local recipes = {}
-local subMenu = {}
 local valNames = {}
 
 -------------------------------------------------------------------------------
@@ -70,7 +69,7 @@ end
 
 local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 	local hasArrow = false
-	wipe(subMenu)
+	local subMenu = {}
 
 	if (tradeSkill ~= GetSpellInfo(7411)) and (numAvailable > 1) then
 		hasArrow = true
@@ -255,7 +254,7 @@ function Revelation:Menu(focus, item)
 		Scan(ench, itemEquipLoc, true)
 	else
 		for key, val in pairs(Professions) do
-			if val == true then Scan(key, itemName)	end
+			if val == true then Scan(key, itemName, false) end
 		end
 	end
 	dewdrop:Open(focus, "children", function() dewdrop:FeedTable(recipes) end)
