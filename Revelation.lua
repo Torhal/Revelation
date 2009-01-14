@@ -11,7 +11,7 @@ local EquipSlot = {
 	["INVTYPE_CHEST"]		= "Chest",
 	["INVTYPE_ROBE"]		= "Chest",
 	["INVTYPE_FEET"]		= "Boots",
-	["INVTYPE_WRIST"]		= "Bracer",
+	["INVTYPE_WRIST"]		= {"Bracer", "Bracers"},
 	["INVTYPE_HAND"]		= "Gloves",
 	["INVTYPE_FINGER"]		= "Ring",
 	["INVTYPE_CLOAK"]		= "Cloak",
@@ -38,11 +38,11 @@ local Professions = {
 }
 
 local Difficulty = {
-	["trivial"]	= '|cff777777',
-	["easy"]	= '|cff33bb33',
-	["medium"]	= '|cffffff00',
-	["optimal"]	= '|cffff7733',
-	["difficult"]	= '|cffffffff',
+	["trivial"]	= "|cff777777",
+	["easy"]	= "|cff33bb33",
+	["medium"]	= "|cffffff00",
+	["optimal"]	= "|cffff7733",
+	["difficult"]	= "|cffffffff",
 }
 
 -------------------------------------------------------------------------------
@@ -99,7 +99,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 			)
 		end
 
-		if (numAvailable > 15) then
+		if (numAvailable >= 15) then
 			for i = 15, numAvailable, 5 do
 				tinsert(subMenu,
 					{
@@ -117,6 +117,8 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 	end
 
 	if recipes["Nothing"] then recipes["Nothing"] = nil end
+
+--	local itemLink = GetTradeSkillItemLink(skillIndex)
 
 	recipes[text] =	{
 		text = text,
@@ -144,27 +146,35 @@ local function IterTrade(tradeSkill, skillNum, reference, skillName, numAvailabl
 			     dewdrop:Close()
 		     end
 
-	if single then
-		AddRecipe(tradeSkill, skillName, func, skillNum, 1)
-	else
-		AddRecipe(tradeSkill, skillName, func, skillNum, numAvailable)
-	end
+	AddRecipe(tradeSkill, skillName.color, func, skillNum, single and 1 or numAvailable)
 end
 
 local function IterEnchant(tradeSkill, skillNum, reference, skillName, numAvailable, single)
-	local hyphen = strfind(skillName, "-")
-
+	local hyphen = strfind(skillName.normal, "-")
 	if (hyphen == nil) or (numAvailable < 1) then return end
-	local enchantType = strsub(skillName, 9, hyphen - 2)
 
-	if strfind(enchantType, EquipSlot[reference]) then
-		local func = function()
-				     SetTradeSkill(tradeSkill)
-				     DoTradeSkill(skillNum, 1)
-				     dewdrop:Close()
-			     end
-		AddRecipe(tradeSkill, skillName, func, skillNum)
+	local enchantType = strsub(skillName.normal, 9, hyphen - 2)
+	local ref = EquipSlot[reference]
+	local found = false
+
+	if (type(ref) == "string") and (enchantType == ref) then
+		found = true
+	elseif type(ref) == "table" then
+		for k, v in ipairs(ref) do
+			if enchantType == v then
+				found = true
+				break
+			end
+		end
 	end
+
+	if not found then return end
+	local func = function()
+			     SetTradeSkill(tradeSkill)
+			     DoTradeSkill(skillNum, 1)
+			     dewdrop:Close()
+		     end
+	AddRecipe(tradeSkill, skillName.color, func, skillNum)
 end
 
 local function Scan(tradeSkill, reference, single)
@@ -175,12 +185,14 @@ local function Scan(tradeSkill, reference, single)
 
 	if (tradeSkill == GetSpellInfo(7411)) and EquipSlot[reference] then func = IterEnchant end
 
-	local numSkills = GetNumTradeSkills()
-
-	for i = 1, numSkills do
+	for i = 1, GetNumTradeSkills() do
 		local skillName, skillType, numAvailable, _ = GetTradeSkillInfo(i)
-		if skillType ~= "header" then 
-			func(tradeSkill, i, reference, Difficulty[skillType]..skillName.."|r", numAvailable, single)
+		if skillType ~= "header" then
+			local names = {
+				["normal"] = skillName,
+				["color"] = Difficulty[skillType]..skillName.."|r"
+			}
+			func(tradeSkill, i, reference, names, numAvailable, single)
 		end
 	end
 	CloseTradeSkill()
@@ -246,7 +258,7 @@ function Revelation:Menu(focus, item)
 			if val == true then Scan(key, itemName)	end
 		end
 	end
-	dewdrop:Open(focus, 'children', function() dewdrop:FeedTable(recipes) end)
+	dewdrop:Open(focus, "children", function() dewdrop:FeedTable(recipes) end)
 end
 
 -------------------------------------------------------------------------------
