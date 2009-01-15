@@ -15,4 +15,6 @@
 embeds.xml
 #@end-no-lib-strip@
 
+Localization\enUS.lua
+
 Revelation.lua

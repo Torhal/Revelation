@@ -2,24 +2,34 @@
 -- Localized globals
 -------------------------------------------------------------------------------
 local _G = getfenv(0)
-local strfind, strsub, tinsert = _G.string.find, _G.string.sub, _G.table.insert
+local strfind, strsub = _G.string.find, _G.string.sub
+local pairs, ipairs, tinsert = _G.pairs, _G.ipairs, _G.table.insert
+local GetSpellInfo = _G.GetSpellInfo
+
+-------------------------------------------------------------------------------
+-- AddOn namespace
+-------------------------------------------------------------------------------
+local dewdrop = AceLibrary("Dewdrop-2.0")
+local AceAddon = LibStub("AceAddon-3.0")
+Revelation = AceAddon:NewAddon("Revelation", "AceHook-3.0")
+local L = LibStub("AceLocale-3.0"):GetLocale("Revelation", false)
 
 -------------------------------------------------------------------------------
 -- Constants
 -------------------------------------------------------------------------------
 local EquipSlot = {
-	["INVTYPE_CHEST"]		= "Chest",
-	["INVTYPE_ROBE"]		= "Chest",
-	["INVTYPE_FEET"]		= "Boots",
-	["INVTYPE_WRIST"]		= {"Bracer", "Bracers"},
-	["INVTYPE_HAND"]		= "Gloves",
-	["INVTYPE_FINGER"]		= "Ring",
-	["INVTYPE_CLOAK"]		= "Cloak",
-	["INVTYPE_WEAPON"]		= "Weapon",
-	["INVTYPE_SHIELD"]		= "Shield",
-	["INVTYPE_2HWEAPON"]		= "2H Weapon",
-	["INVTYPE_WEAPONMAINHAND"]	= "Weapon",
-	["INVTYPE_WEAPONOFFHAND"]	= "Weapon"
+	["INVTYPE_CHEST"]		= L["Chest"],
+	["INVTYPE_ROBE"]		= L["Chest"],
+	["INVTYPE_FEET"]		= L["Boots"],
+	["INVTYPE_WRIST"]		= {L["Bracer"], L["Bracers"]},
+	["INVTYPE_HAND"]		= L["Gloves"],
+	["INVTYPE_FINGER"]		= L["Ring"],
+	["INVTYPE_CLOAK"]		= L["Cloak"],
+	["INVTYPE_WEAPON"]		= L["Weapon"],
+	["INVTYPE_SHIELD"]		= L["Shield"],
+	["INVTYPE_2HWEAPON"]		= L["2H Weapon"],
+	["INVTYPE_WEAPONMAINHAND"]	= L["Weapon"],
+	["INVTYPE_WEAPONOFFHAND"]	= L["Weapon"]
 }
 
 local Professions = {
@@ -53,13 +63,6 @@ local recipes = {}
 local valNames = {}
 
 -------------------------------------------------------------------------------
--- AddOn namespace
--------------------------------------------------------------------------------
-local dewdrop = AceLibrary("Dewdrop-2.0")
-local AceAddon = LibStub("AceAddon-3.0")
-Revelation = AceAddon:NewAddon("Revelation", "AceHook-3.0")
-
--------------------------------------------------------------------------------
 -- Local functions
 -------------------------------------------------------------------------------
 local function SetTradeSkill(tradeSkill)
@@ -75,13 +78,13 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 		hasArrow = true
 		tinsert(subMenu,
 			{
-				text = "All",
+				text = L["All"],
 				func = function()
 					       SetTradeSkill(tradeSkill)
 					       DoTradeSkill(skillIndex, numAvailable)
 					       dewdrop:Close()
 				       end,
-				tooltipText = "Create every "..text.." you have reagents for."
+				tooltipText = L["CreateAll"]..text..L["HaveReagents"]
 			}
 		)
 		local max = math.min(numAvailable, 10)
@@ -95,7 +98,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 						       DoTradeSkill(skillIndex, i)
 						       dewdrop:Close()
 					       end,
-					tooltipText = "Create "..i.." of: "..text.."."
+					tooltipText = L["Create"]..i.." "..text.."."
 				}
 			)
 		end
@@ -110,7 +113,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 							       DoTradeSkill(skillIndex, i)
 							       dewdrop:Close()
 						       end,
-						tooltipText = "Create "..i.." of: "..text.."."
+						tooltipText = L["Create"]..i.." "..text.."."
 					}
 				)
 			end
@@ -141,11 +144,12 @@ end
 
 local function IterTrade(tradeSkill, skillNum, reference, skillName, numAvailable, single)
 	if (numAvailable < 1) or (not IsReagent(reference, skillNum)) then return end
-	local func = function()
-			     SetTradeSkill(tradeSkill)
-			     DoTradeSkill(skillNum, 1)
-			     dewdrop:Close()
-		     end
+	local func =
+		function()
+			SetTradeSkill(tradeSkill)
+			DoTradeSkill(skillNum, 1)
+			dewdrop:Close()
+		end
 
 	AddRecipe(tradeSkill, skillName.color, func, skillNum, single and 1 or numAvailable)
 end
@@ -170,11 +174,12 @@ local function IterEnchant(tradeSkill, skillNum, reference, skillName, numAvaila
 	end
 
 	if not found then return end
-	local func = function()
-			     SetTradeSkill(tradeSkill)
-			     DoTradeSkill(skillNum, 1)
-			     dewdrop:Close()
-		     end
+	local func =
+		function()
+			SetTradeSkill(tradeSkill)
+			DoTradeSkill(skillNum, 1)
+			dewdrop:Close()
+		end
 	AddRecipe(tradeSkill, skillName.color, func, skillNum, 1)
 end
 
@@ -239,7 +244,7 @@ function Revelation:Menu(focus, item)
 
 	recipes = {
 		["Nothing"] = {
-			text = "Either no recipe or no reagents were found.",
+			text = L["NotFound"],
 			func = function() dewdrop:Close() end,
 			hasArrow = false
 		}
@@ -248,7 +253,7 @@ function Revelation:Menu(focus, item)
 
 	local itemName, _, _, _, _, itemType, _, _, itemEquipLoc, _ = GetItemInfo(item)
 
-	if (itemType == "Armor") or (itemType == "Weapon") then
+	if (itemType == L["Armor"]) or (itemType == L["Weapon"]) then
 		local ench = GetSpellInfo(7411)
 		if (Professions[ench] == false) then return end
 		Scan(ench, itemEquipLoc, true)
@@ -292,4 +297,4 @@ function Revelation:HandleModifiedItemClick(...)
 	end
 	return self.hooks.HandleModifiedItemClick(...)
 end
-getglobal("TradeRecipientItem7ItemButton"):RegisterForClicks("AnyUp")
+_G["TradeRecipientItem7ItemButton"]:RegisterForClicks("AnyUp")

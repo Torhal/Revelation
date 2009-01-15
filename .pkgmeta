@@ -7,6 +7,9 @@ externals:
     Libs/AceHook-3.0:
       url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceHook-3.0
       tag: latest
+    Libs/AceLocale-3.0:
+      url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceLocale-3.0
+      tag: latest
     Libs/Dewdrop-2.0/AceLibrary:
       url: svn://svn.wowace.com/wow/ace2/mainline/trunk/AceLibrary
       tag: latest

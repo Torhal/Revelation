@@ -3,6 +3,7 @@
 	<!--@no-lib-strip@-->
 	<Include file="Libs\AceAddon-3.0\AceAddon-3.0.xml"/>
 	<Include file="Libs\AceHook-3.0\AceHook-3.0.xml"/>
+	<Include file="Libs\AceLocale-3.0\AceLocale-3.0.xml"/>
 	<Script file="Libs\Dewdrop-2.0\AceLibrary\AceLibrary.lua"/>
 	<Script file="Libs\Dewdrop-2.0\Dewdrop-2.0.lua"/>
 	<!--@end-no-lib-strip@-->
