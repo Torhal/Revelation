@@ -155,18 +155,16 @@ local function IterTrade(tradeSkill, skillNum, reference, skillName, numAvailabl
 end
 
 local function IterEnchant(tradeSkill, skillNum, reference, skillName, numAvailable, single)
-	local hyphen = strfind(skillName.normal, "-")
-	if (hyphen == nil) or (numAvailable < 1) then return end
+	if (numAvailable < 1) then return end
 
-	local enchantType = strsub(skillName.normal, 9, hyphen - 2)
 	local ref = EquipSlot[reference]
 	local found = false
 
-	if (type(ref) == "string") and (enchantType == ref) then
+	if (type(ref) == "string") and (strfind(skillName.normal, ref) ~= nil) then
 		found = true
 	elseif type(ref) == "table" then
 		for k, v in ipairs(ref) do
-			if enchantType == v then
+			if (strfind(skillName.normal, v) ~= nil) then
 				found = true
 				break
 			end
