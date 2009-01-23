@@ -21,7 +21,7 @@ local EquipSlot = {
 	["INVTYPE_CHEST"]		= L["Chest"],
 	["INVTYPE_ROBE"]		= L["Chest"],
 	["INVTYPE_FEET"]		= L["Boots"],
-	["INVTYPE_WRIST"]		= {L["Bracer"], L["Bracers"]},
+	["INVTYPE_WRIST"]		= L["Bracer"],
 	["INVTYPE_HAND"]		= L["Gloves"],
 	["INVTYPE_FINGER"]		= L["Ring"],
 	["INVTYPE_CLOAK"]		= L["Cloak"],
@@ -160,15 +160,12 @@ local function IterEnchant(tradeSkill, skillNum, reference, skillName, numAvaila
 	local ref = EquipSlot[reference]
 	local found = false
 
-	if (type(ref) == "string") and (strfind(skillName.normal, ref) ~= nil) then
-		found = true
-	elseif type(ref) == "table" then
-		for k, v in ipairs(ref) do
-			if (strfind(skillName.normal, v) ~= nil) then
-				found = true
-				break
-			end
+	if (reference == "INVTYPE_WEAPONMAINHAND") or (reference == "INVTYPE_WEAPONOFFHAND") then
+		if (strfind(skillName.normal, EquipSlot["INVTYPE_2HWEAPON"]) == nil) and (strfind(skillName.normal, ref) ~= nil) then
+			found = true
 		end
+	elseif (strfind(skillName.normal, ref) ~= nil) then
+		found = true
 	end
 
 	if not found then return end
