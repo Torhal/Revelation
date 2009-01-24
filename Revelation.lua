@@ -250,8 +250,13 @@ function Revelation:Menu(focus, item)
 
 	if (itemType == L["Armor"]) or (itemType == L["Weapon"]) then
 		local ench = GetSpellInfo(7411)
-		if (Professions[ench] == false) then return end
-		Scan(ench, itemEquipLoc, true)
+		local scribe = GetSpellInfo(45357)
+		if (Professions[ench] == true) then
+			Scan(ench, itemEquipLoc, true)
+		end
+		if (Professions[scribe] == true) then
+			Scan(scribe, itemEquipLoc, true)
+		end
 	else
 		for key, val in pairs(Professions) do
 			if val == true then Scan(key, itemName, false) end
