@@ -12,7 +12,12 @@ local GetSpellInfo = _G.GetSpellInfo
 local dewdrop = AceLibrary("Dewdrop-2.0")
 local AceAddon = LibStub("AceAddon-3.0")
 Revelation = AceAddon:NewAddon("Revelation", "AceHook-3.0")
-local L = LibStub("AceLocale-3.0"):GetLocale("Revelation", false)
+
+local dev = false
+--@debug@
+dev = true
+--@end-debug@
+local L = LibStub("AceLocale-3.0"):GetLocale("Revelation", "enUS", true, dev)
 
 -------------------------------------------------------------------------------
 -- Constants
@@ -40,7 +45,7 @@ local Professions = {
 	[GetSpellInfo(4036)]	= false, -- Engineering
 	[GetSpellInfo(746)]	= false, -- First Aid
 	[GetSpellInfo(2108)]	= false, -- Leatherworking
-	[GetSpellInfo(2575)]	= false, -- Smelting
+	[GetSpellInfo(61422)]	= false, -- Smelting
 	[GetSpellInfo(3908)]	= false, -- Tailoring
 	[GetSpellInfo(25229)]	= false, -- Jewelcrafting
 	[GetSpellInfo(45357)]	= false, -- Inscription
@@ -84,7 +89,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 					       DoTradeSkill(skillIndex, numAvailable)
 					       dewdrop:Close()
 				       end,
-				tooltipText = L["CreateAll"]..text..L["HaveReagents"]
+				tooltipText = L["Create every "]..text.." "..L["you have reagents for."]
 			}
 		)
 		local max = math.min(numAvailable, 10)
@@ -98,7 +103,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 						       DoTradeSkill(skillIndex, i)
 						       dewdrop:Close()
 					       end,
-					tooltipText = L["Create"]..i.." "..text.."."
+					tooltipText = L["Create"].." "..i.." "..text.."."
 				}
 			)
 		end
@@ -113,7 +118,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 							       DoTradeSkill(skillIndex, i)
 							       dewdrop:Close()
 						       end,
-						tooltipText = L["Create"]..i.." "..text.."."
+						tooltipText = L["Create"].." "..i.." "..text.."."
 					}
 				)
 			end
@@ -128,7 +133,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 		text = text,
 		func = func,
 		hasArrow = hasArrow,
-		tooltipText = GetTradeSkillDescription(skillIndex),
+		tooltipText = GetTradeSkillDescription(skillIndex) or L["Create"].." 1 "..text..".",
 		subMenu = subMenu
 	}
 end
@@ -239,7 +244,7 @@ function Revelation:Menu(focus, item)
 
 	recipes = {
 		["Nothing"] = {
-			text = L["NotFound"],
+			text = L["Either no recipe or no reagents were found."],
 			func = function() dewdrop:Close() end,
 			hasArrow = false
 		}
@@ -251,11 +256,15 @@ function Revelation:Menu(focus, item)
 	if (itemType == L["Armor"]) or (itemType == L["Weapon"]) then
 		local ench = GetSpellInfo(7411)
 		local scribe = GetSpellInfo(45357)
+		local rune = GetSpellInfo(53428)
 		if (Professions[ench] == true) then
 			Scan(ench, itemEquipLoc, true)
 		end
 		if (Professions[scribe] == true) then
 			Scan(scribe, itemEquipLoc, true)
+		end
+		if (Professions[rune] == true) then
+			Scan(rune, itemEquipLoc, true)
 		end
 	else
 		for key, val in pairs(Professions) do
