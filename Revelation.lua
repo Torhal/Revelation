@@ -89,7 +89,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 					       DoTradeSkill(skillIndex, numAvailable)
 					       dewdrop:Close()
 				       end,
-				tooltipText = L["Create every "]..text.." "..L["you have reagents for."]
+				tooltipText = L["Create every"].." "..text.." "..L["you have reagents for."]
 			}
 		)
 		local max = math.min(numAvailable, 10)
@@ -128,11 +128,18 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 	if recipes["Nothing"] then wipe(recipes) end
 
 --	local itemLink = GetTradeSkillItemLink(skillIndex)
+--	local itemLink = GetTradeSkillRecipeLink(skillIndex)
+	local _, _, itemString = string.find(GetTradeSkillItemLink(skillIndex), "^|c%x+|H(.+)|h%[.*%]")
+	local _, _, _, _, _, _, _, _, _, itemIcon = GetItemInfo(itemString)
+	local _, itemId, _, _, _, _, _, _, _ = strsplit(":", itemString)
 
 	recipes[text] =	{
 		text = text,
 		func = func,
 		hasArrow = hasArrow,
+		icon = itemIcon,
+		iconWidth = 16,
+		iconHeight = 16,
 		tooltipText = GetTradeSkillDescription(skillIndex) or L["Create"].." 1 "..text..".",
 		subMenu = subMenu
 	}
