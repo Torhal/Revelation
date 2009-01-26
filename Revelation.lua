@@ -132,33 +132,6 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 	local itemLink = GetTradeSkillItemLink(skillIndex)
 	local enchantLink = GetTradeSkillRecipeLink(skillIndex)
 
-	GameTooltip:SetHyperlink(itemLink or enchantLink)
-
-	local tipText, curLine
-
-	for i = 1, GameTooltip:NumLines() do
-		do	-- Left side
-			local strObj = _G[GameTooltip:GetName().."TextLeft"..i]
-			curLine = strObj:GetText()
-		end
-		do	-- Right side
-			local strObj = _G[GameTooltip:GetName().."TextRight"..i]
-			local strText = strObj:GetText()
-			if strText ~= nil and curLine ~= nil then
-				curLine = curLine.." "..strText.."\n"
-			elseif strText ~= nil then
-				curLine = strObj:GetText().."\n"
-			elseif curLine ~= nil then
-				curLine = curLine.."\n"
-			end
-		end
-		if tipText ~= nil then
-			tipText = tipText..curLine
-		else
-			tipText = curLine
-		end
-	end
-
 	recipes[text.normal] =	{
 		text = text.color,
 		func = func,
@@ -167,6 +140,9 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 		iconWidth = 16,
 		iconHeight = 16,
 		tooltipText = tipText,
+		tooltipFunc = GameTooltip.SetHyperlink,
+		tooltipArg1 = GameTooltip,
+		tooltipArg2 = (itemLink or enchantLink),
 		subMenu = subMenu
 	}
 end
