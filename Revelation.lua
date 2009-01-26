@@ -89,7 +89,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 					       DoTradeSkill(skillIndex, numAvailable)
 					       dewdrop:Close()
 				       end,
-				tooltipText = L["Create every"].." "..text.." "..L["you have reagents for."]
+				tooltipText = L["Create every"].." "..text.color.." "..L["you have reagents for."]
 			}
 		)
 		local max = math.min(numAvailable, 10)
@@ -103,7 +103,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 						       DoTradeSkill(skillIndex, i)
 						       dewdrop:Close()
 					       end,
-					tooltipText = L["Create"].." "..i.." "..text.."."
+					tooltipText = L["Create"].." "..i.." "..text.color.."."
 				}
 			)
 		end
@@ -118,7 +118,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 							       DoTradeSkill(skillIndex, i)
 							       dewdrop:Close()
 						       end,
-						tooltipText = L["Create"].." "..i.." "..text.."."
+						tooltipText = L["Create"].." "..i.." "..text.color.."."
 					}
 				)
 			end
@@ -127,20 +127,20 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 
 	if recipes["Nothing"] then wipe(recipes) end
 
---	local itemLink = GetTradeSkillItemLink(skillIndex)
+	local itemLink = GetTradeSkillItemLink(skillIndex)
 --	local itemLink = GetTradeSkillRecipeLink(skillIndex)
-	local _, _, itemString = string.find(GetTradeSkillItemLink(skillIndex), "^|c%x+|H(.+)|h%[.*%]")
-	local _, _, _, _, _, _, _, _, _, itemIcon = GetItemInfo(itemString)
+	local _, _, itemString = string.find(itemLink, "^|c%x+|H(.+)|h%[.*%]")
 	local _, itemId, _, _, _, _, _, _, _ = strsplit(":", itemString)
+	local itemIcon = select(10, GetItemInfo(itemString)) or GetTradeSkillIcon(skillIndex)
 
-	recipes[text] =	{
-		text = text,
+	recipes[text.normal] =	{
+		text = text.color,
 		func = func,
 		hasArrow = hasArrow,
 		icon = itemIcon,
 		iconWidth = 16,
 		iconHeight = 16,
-		tooltipText = GetTradeSkillDescription(skillIndex) or L["Create"].." 1 "..text..".",
+		tooltipText = GetTradeSkillDescription(skillIndex) or L["Create"].." 1 "..text.normal..".",
 		subMenu = subMenu
 	}
 end
@@ -163,7 +163,7 @@ local function IterTrade(tradeSkill, skillNum, reference, skillName, numAvailabl
 			dewdrop:Close()
 		end
 
-	AddRecipe(tradeSkill, skillName.color, func, skillNum, single and 1 or numAvailable)
+	AddRecipe(tradeSkill, skillName, func, skillNum, single and 1 or numAvailable)
 end
 
 local function IterEnchant(tradeSkill, skillNum, reference, skillName, numAvailable, single)
@@ -187,7 +187,7 @@ local function IterEnchant(tradeSkill, skillNum, reference, skillName, numAvaila
 			DoTradeSkill(skillNum, 1)
 			dewdrop:Close()
 		end
-	AddRecipe(tradeSkill, skillName.color, func, skillNum, 1)
+	AddRecipe(tradeSkill, skillName, func, skillNum, 1)
 end
 
 local function Scan(tradeSkill, reference, single)
