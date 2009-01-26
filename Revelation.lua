@@ -4,7 +4,9 @@
 local _G = getfenv(0)
 local strfind, strsub = _G.string.find, _G.string.sub
 local pairs, ipairs, tinsert = _G.pairs, _G.ipairs, _G.table.insert
-local GetSpellInfo = _G.GetSpellInfo
+local GameTooltip, GetSpellInfo = _G.GameTooltip, _G.GetSpellInfo
+local GetTradeSkillItemLink = _G.GetTradeSkillItemLink
+local GetTradeSkillRecipeLink = _G.GetTradeSkillRecipeLink
 
 -------------------------------------------------------------------------------
 -- AddOn namespace
@@ -89,7 +91,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 					       DoTradeSkill(skillIndex, numAvailable)
 					       dewdrop:Close()
 				       end,
-				tooltipText = L["Create every"].." "..text.color.." "..L["you have reagents for."]
+				tooltipText = L["Create every"].." "..text.normal.." "..L["you have reagents for."]
 			}
 		)
 		local max = math.min(numAvailable, 10)
@@ -103,7 +105,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 						       DoTradeSkill(skillIndex, i)
 						       dewdrop:Close()
 					       end,
-					tooltipText = L["Create"].." "..i.." "..text.color.."."
+					tooltipText = L["Create"].." "..i.." "..text.normal.."."
 				}
 			)
 		end
@@ -118,7 +120,7 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 							       DoTradeSkill(skillIndex, i)
 							       dewdrop:Close()
 						       end,
-						tooltipText = L["Create"].." "..i.." "..text.color.."."
+						tooltipText = L["Create"].." "..i.." "..text.normal.."."
 					}
 				)
 			end
@@ -128,19 +130,43 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 	if recipes["Nothing"] then wipe(recipes) end
 
 	local itemLink = GetTradeSkillItemLink(skillIndex)
---	local itemLink = GetTradeSkillRecipeLink(skillIndex)
-	local _, _, itemString = string.find(itemLink, "^|c%x+|H(.+)|h%[.*%]")
-	local _, itemId, _, _, _, _, _, _, _ = strsplit(":", itemString)
-	local itemIcon = select(10, GetItemInfo(itemString)) or GetTradeSkillIcon(skillIndex)
+	local enchantLink = GetTradeSkillRecipeLink(skillIndex)
+
+	GameTooltip:SetHyperlink(itemLink or enchantLink)
+
+	local tipText, curLine
+
+	for i = 1, GameTooltip:NumLines() do
+		do	-- Left side
+			local strObj = _G[GameTooltip:GetName().."TextLeft"..i]
+			curLine = strObj:GetText()
+		end
+		do	-- Right side
+			local strObj = _G[GameTooltip:GetName().."TextRight"..i]
+			local strText = strObj:GetText()
+			if strText ~= nil and curLine ~= nil then
+				curLine = curLine.." "..strText.."\n"
+			elseif strText ~= nil then
+				curLine = strObj:GetText().."\n"
+			elseif curLine ~= nil then
+				curLine = curLine.."\n"
+			end
+		end
+		if tipText ~= nil then
+			tipText = tipText..curLine
+		else
+			tipText = curLine
+		end
+	end
 
 	recipes[text.normal] =	{
 		text = text.color,
 		func = func,
 		hasArrow = hasArrow,
-		icon = itemIcon,
+		icon = select(10, GetItemInfo(itemLink)) or GetTradeSkillIcon(skillIndex),
 		iconWidth = 16,
 		iconHeight = 16,
-		tooltipText = GetTradeSkillDescription(skillIndex) or L["Create"].." 1 "..text.normal..".",
+		tooltipText = tipText,
 		subMenu = subMenu
 	}
 end
