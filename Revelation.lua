@@ -55,11 +55,10 @@ local Professions = {
 }
 
 local Difficulty = {
-	["trivial"]	= "|cff777777",
-	["easy"]	= "|cff33bb33",
+	["trivial"]	= "|cff808080",
+	["easy"]	= "|cff40bf40",
 	["medium"]	= "|cffffff00",
-	["optimal"]	= "|cffff7733",
-	["difficult"]	= "|cffffffff",
+	["optimal"]	= "|cffff8040",
 }
 
 -------------------------------------------------------------------------------
