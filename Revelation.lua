@@ -11,15 +11,15 @@ local GetTradeSkillRecipeLink = _G.GetTradeSkillRecipeLink
 -------------------------------------------------------------------------------
 -- AddOn namespace
 -------------------------------------------------------------------------------
+local NAME = "Revelation"
+local Revelation = LibStub("AceAddon-3.0"):NewAddon(NAME, "AceHook-3.0")
 local dewdrop = AceLibrary("Dewdrop-2.0")
-local AceAddon = LibStub("AceAddon-3.0")
-Revelation = AceAddon:NewAddon("Revelation", "AceHook-3.0")
 
 local dev = false
 --@debug@
 dev = true
 --@end-debug@
-local L = LibStub("AceLocale-3.0"):GetLocale("Revelation", "enUS", true, dev)
+local L = LibStub("AceLocale-3.0"):GetLocale(NAME, "enUS", true, dev)
 
 -------------------------------------------------------------------------------
 -- Constants
@@ -61,12 +61,47 @@ local Difficulty = {
 	["optimal"]	= "|cffff8040",
 }
 
+local function ReturnTrue() return true end
+
+local ButtonName = {
+	[1] = L["Left Button"],
+	[2] = L["Right Button"]
+}
+
+local MouseButton = {
+	[1] = "LeftButton",
+	[2] = "RightButton"
+}
+
+local ModifierName = {
+	[1] = L["ALT"],
+	[2] = L["CTRL"],
+	[3] = L["SHIFT"],
+	[4] = L["NONE"]
+}
+
+local ModifierKey = {
+	[1] = IsAltKeyDown,	-- ALT
+	[2] = IsControlKeyDown,	-- CTRL
+	[3] = IsShiftKeyDown,	-- SHIFT
+	[4] = ReturnTrue	-- NONE
+}
+
+local defaults = {
+	profile = {
+		modifier = 1,	-- ALT
+		modifier2 = 4,	-- NONE
+		button = 1	-- LeftButton
+	}
+}
+
 -------------------------------------------------------------------------------
 -- Variables
 -------------------------------------------------------------------------------
 local isHandled = false		-- For HandleModifiedItemClick kludge...
 local recipes = {}
 local valNames = {}
+local db
 
 -------------------------------------------------------------------------------
 -- Local functions
@@ -77,7 +112,7 @@ local function SetTradeSkill(tradeSkill)
 end
 
 local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
-	local hasArrow, hasSlider = false, false
+	local hasArrow = false
 	local subMenu = {}
 
 	if (tradeSkill ~= GetSpellInfo(7411)) and (numAvailable > 1) then
@@ -125,7 +160,6 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 		icon = select(10, GetItemInfo(itemLink)) or GetTradeSkillIcon(skillIndex),
 		iconWidth = 16,
 		iconHeight = 16,
-		tooltipText = tipText,
 		tooltipFunc = GameTooltip.SetHyperlink,
 		tooltipArg1 = GameTooltip,
 		tooltipArg2 = (itemLink or enchantLink),
@@ -218,6 +252,20 @@ end
 -- Main AddOn functions
 -------------------------------------------------------------------------------
 function Revelation:OnInitialize()
+	local LDBinfo = {
+		type = "launcher",
+		icon = "Interface\\Icons\\Spell_Fire_SealOfFire",
+		label = NAME,
+		OnClick = function(button) InterfaceOptionsFrame_OpenToCategory(Revelation.optionsFrames.Revelation) end
+	}
+	self.DataObj = LibStub("LibDataBroker-1.1"):NewDataObject(NAME, LDBinfo)
+	self.db = LibStub("AceDB-3.0"):New(NAME.."Config", defaults)
+	self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
+	self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
+	self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
+	db = self.db.profile
+
+	self:SetupOptions()
 end
 
 function Revelation:OnEnable()
@@ -230,10 +278,14 @@ function Revelation:OnDisable()
 	self:UnhookAll()
 end
 
+function Revelation:OnProfileChanged(event, database, newProfileKey)
+	db = database.profile
+end
+
 function Revelation:Menu(focus, item)
 	if (item == nil) then return end
 	if (focus == nil) then
-		if not IsAltKeyDown() then return end	-- Enforce for HandleModifiedItemClick
+		if (not ModifierKey[db.modifier]()) and (not ModifierKey[db.modifier2]()) then return end	-- Enforce for HandleModifiedItemClick
 		focus = GetMouseFocus()
 	end
 
@@ -275,7 +327,7 @@ end
 function Revelation:PaperDollItemSlotButton_OnModifiedClick(...)
 	local hookSelf, button = ...
 	isHandled = true
-	if IsAltKeyDown() and (button == "LeftButton") then
+	if (ModifierKey[db.modifier]() and ModifierKey[db.modifier2]() and (button == MouseButton[db.button])) then
 		self:Menu(hookSelf, GetInventoryItemLink("player", hookSelf:GetID()))
 	else
 		self.hooks.PaperDollItemSlotButton_OnModifiedClick(...)
@@ -286,7 +338,8 @@ end
 function Revelation:ContainerFrameItemButton_OnModifiedClick(...)
 	local hookSelf, button = ...
 	isHandled = true
-	if IsAltKeyDown() and (button == "LeftButton") then
+
+	if (ModifierKey[db.modifier]() and ModifierKey[db.modifier2]() and (button == MouseButton[db.button])) then
 		self:Menu(hookSelf, GetContainerItemLink(hookSelf:GetParent():GetID(), hookSelf:GetID()))
 	end
 	self.hooks.ContainerFrameItemButton_OnModifiedClick(...)
@@ -302,3 +355,55 @@ function Revelation:HandleModifiedItemClick(...)
 	return self.hooks.HandleModifiedItemClick(...)
 end
 _G["TradeRecipientItem7ItemButton"]:RegisterForClicks("AnyUp")
+
+-------------------------------------------------------------------------------
+-- Configuration
+-------------------------------------------------------------------------------
+local options
+
+local function GetOptions()
+	if not options then
+		options = {
+			type = "group",
+			name = NAME,
+			args = {
+				modifier = {
+					order = 1,
+					type = "select",
+					name = L["Modifier Key"],
+					desc = L["Select the key to press when mouse-clicking for menu display."],
+					get = function() return db.modifier end,
+					set = function(info, value) db.modifier = value end,
+					values = ModifierName
+				},
+				modifier2 = {
+					order = 2,
+					type = "select",
+					name = L["Second Modifier Key"],
+					desc = L["Select the second key to press when mouse-clicking for menu display."],
+					get = function() return db.modifier2 end,
+					set = function(info, value) db.modifier2 = value end,
+					values = ModifierName
+				},
+				button = {
+					order = 3,
+					type = "select",
+					name = L["Mouse Button"],
+					desc = L["Select the mouse button to click for menu display."],
+					get = function() return db.button end,
+					set = function(info, value) db.button = value end,
+					values = MouseButton
+				}
+			}
+		}
+	end
+	return options
+end
+
+function Revelation:SetupOptions()
+	self.optionsFrames = {}
+
+	LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(NAME, GetOptions())
+	LibStub("AceConfig-3.0"):RegisterOptionsTable(NAME, GetOptions(), "nanotalk")
+	self.optionsFrames.Revelation = LibStub("AceConfigDialog-3.0"):AddToBlizOptions(NAME)
+end

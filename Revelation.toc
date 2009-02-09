@@ -1,12 +1,13 @@
 ## Interface: 30000
 ## Title: Revelation
-## Notes: Allows tradeskill usage by ALT-clicking items or reagents.
+## Notes: Allows tradeskill usage by clicking items or reagents.
 ## Author: Torhal
 ## Version: @project-version@
 ## X-Date: @project-date-iso@
 ## X-Email: torhal-wow@googlegroups.com
 ## X-Category: Professions
 ## OptionalDeps: Ace3, AceLibrary, Dewdrop-2.0
+## SavedVariables: RevelationConfig
 
 ## LoadManagers: AddonLoader
 ## X-LoadOn-Always: Delayed
@@ -14,6 +15,8 @@
 #@no-lib-strip@
 embeds.xml
 #@end-no-lib-strip@
+
+Libs\LibDataBroker-1.1.lua
 
 Localization\deDE.lua
 Localization\enUS.lua
