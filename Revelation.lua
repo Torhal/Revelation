@@ -194,7 +194,7 @@ local function IterEnchant(tradeSkill, skillNum, reference, skillName, numAvaila
 	local ref = EquipSlot[reference]
 	local found = false
 
-	if (reference == "INVTYPE_WEAPONMAINHAND") or (reference == "INVTYPE_WEAPONOFFHAND") then
+	if (reference == "INVTYPE_WEAPON") or (reference == "INVTYPE_WEAPONMAINHAND") or (reference == "INVTYPE_WEAPONOFFHAND") then
 		if (strfind(skillName.normal, EquipSlot["INVTYPE_2HWEAPON"]) == nil) and (strfind(skillName.normal, ref) ~= nil) then
 			found = true
 		end
@@ -392,7 +392,7 @@ local function GetOptions()
 					desc = L["Select the mouse button to click for menu display."],
 					get = function() return db.button end,
 					set = function(info, value) db.button = value end,
-					values = MouseButton
+					values = ButtonName
 				}
 			}
 		}
