@@ -77,7 +77,7 @@ local function SetTradeSkill(tradeSkill)
 end
 
 local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
-	local hasArrow = false
+	local hasArrow, hasSlider = false, false
 	local subMenu = {}
 
 	if (tradeSkill ~= GetSpellInfo(7411)) and (numAvailable > 1) then
@@ -93,37 +93,24 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 				tooltipText = L["Create every"].." "..text.normal.." "..L["you have reagents for."]
 			}
 		)
-		local max = math.min(numAvailable, 10)
-
-		for i = 1, max do
-			tinsert(subMenu,
-				{
-					text = i,
-					func = function()
-						       SetTradeSkill(tradeSkill)
-						       DoTradeSkill(skillIndex, i)
-						       dewdrop:Close()
-					       end,
-					tooltipText = L["Create"].." "..i.." "..text.normal.."."
-				}
-			)
-		end
-
-		if (numAvailable >= 15) then
-			for i = 15, numAvailable, 5 do
-				tinsert(subMenu,
-					{
-						text = i,
-						func = function()
-							       SetTradeSkill(tradeSkill)
-							       DoTradeSkill(skillIndex, i)
-							       dewdrop:Close()
-						       end,
-						tooltipText = L["Create"].." "..i.." "..text.normal.."."
-					}
-				)
-			end
-		end
+		tinsert(subMenu,
+			{
+				text = " 1 - "..numAvailable,
+				tooltipText = L["Create"].." 1 - "..numAvailable.." "..text.normal..".",
+				hasArrow = true,
+				hasEditBox = true,
+				editBoxFunc = function(text)
+						      SetTradeSkill(tradeSkill)
+						      DoTradeSkill(skillIndex, tonumber(text))
+						      dewdrop:Close()
+						      return value
+					      end,
+				editBoxValidateFunc = function(text)
+							      local val = tonumber(text)
+							      return (val >= 1) and (val <= numAvailable)
+						      end,
+			}
+		)
 	end
 
 	if recipes["Nothing"] then wipe(recipes) end
