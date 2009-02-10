@@ -13,7 +13,7 @@ local GetTradeSkillRecipeLink = _G.GetTradeSkillRecipeLink
 -------------------------------------------------------------------------------
 local NAME = "Revelation"
 local Revelation = LibStub("AceAddon-3.0"):NewAddon(NAME, "AceHook-3.0")
-local dewdrop = AceLibrary("Dewdrop-2.0")
+local Dewdrop = AceLibrary("Dewdrop-2.0")
 
 local dev = false
 --@debug@
@@ -52,6 +52,77 @@ local Professions = {
 	[GetSpellInfo(25229)]	= false, -- Jewelcrafting
 	[GetSpellInfo(45357)]	= false, -- Inscription
 	[GetSpellInfo(53428)]	= false, -- Runeforging
+}
+
+local EnchantLevel = {
+	[25086] = 35,	-- Enchant Cloak - Dodge
+	[27906] = 35,	-- Enchant Bracer - Major Defense
+	[27911] = 35,	-- Enchant Bracer - Superior Healing
+	[27913] = 35,	-- Enchant Bracer - Restore Mana Prime
+	[27914] = 35,	-- Enchant Bracer - Fortitude
+	[27917] = 35,	-- Enchant Bracer - Spellpower
+	[27926] = 35,	-- Enchant Ring - Healing Power
+	[27927] = 35,	-- Enchant Ring - Stats
+	[27945] = 35,	-- Enchant Shield - Intellect
+	[27946] = 35,	-- Enchant Shield - Shield Block
+	[27947] = 35,	-- Enchant Shield - Resistance
+	[27948] = 35,	-- Enchant Boots - Vitality
+	[27950] = 35,	-- Enchant Boots - Fortitude
+	[27951] = 35,	-- Enchant Boots - Dexterity
+	[27954] = 35,	-- Enchant Boots - Surefooted
+	[27962] = 35,	-- Enchant Cloak - Major Resistance
+	[27967] = 35,	-- Enchant Weapon - Major Striking
+	[27968] = 35,	-- Enchant Weapon - Major Intellect
+	[27972] = 35,	-- Enchant Weapon - Potency
+	[27975] = 35,	-- Enchant Weapon - Major Spellpower
+	[27977] = 35,	-- Enchant 2H Weapon - Major Agility
+	[27981] = 35,	-- Enchant Weapon - Sunfire
+	[27982] = 35,	-- Enchant Weapon - Soulfrost
+	[27984] = 35,	-- Enchant Weapon - Mongoose
+	[28003] = 35,	-- Enchant Weapon - Spellsurge
+	[28004] = 35,	-- Enchant Weapon - Battlemaster
+	[33992] = 35,	-- Enchant Chest - Major Resilience
+	[33994] = 35,	-- Enchant Gloves - Precise Strikes
+	[33997] = 35,	-- Enchant Gloves - Major Spellpower
+	[33999] = 35,	-- Enchant Gloves - Major Healing
+	[34003] = 35,	-- Enchant Cloak - Spell Penetration
+	[34005] = 35,	-- Enchant Cloak - Greater Arcane Resistance
+	[34006] = 35,	-- Enchant Cloak - Greater Shadow Resistance
+	[34008] = 35,	-- Enchant Boots - Boar's Speed
+	[34009] = 35,	-- Enchant Shield - Major Stamina
+	[34010] = 35,	-- Enchant Weapon - Major Healing
+	[42620] = 35,	-- Enchant Weapon - Greater Agility
+	[42974] = 60,	-- Enchant Weapon - Executioner
+	[44483] = 60,	-- Enchant Cloak - Superior Frost Resistance
+	[44494] = 60,	-- Enchant Cloak - Superior Nature Resistance
+	[44524] = 60,	-- Enchant Weapon - Icebreaker
+	[44575] = 60,	-- Enchant Bracers - Greater Assault
+	[44576] = 60,	-- Enchant Weapon - Lifeward
+	[44590] = 60,	-- Enchant Cloak - Superior Shadow Resistance
+	[44591] = 60,	-- Enchant Cloak - Titanweave
+	[44595] = 60,	-- Enchant 2H Weapon - Scourgebane
+	[44596] = 60,	-- Enchant Cloak - Superior Arcane Resistance
+	[44621] = 60,	-- Enchant Weapon - Giant Slayer
+	[44625] = 60,	-- Enchant Gloves - Armsman
+	[44631] = 60,	-- Enchant Cloak - Shadow Armor
+	[46578] = 60,	-- Enchant Weapon - Deathfrost
+	[46594] = 35,	-- Enchant Chest - Defense
+	[47051] = 35,	-- Enchant Cloak - Steelweave
+	[47672] = 60,	-- Enchant Cloak - Mighty Armor
+	[47898] = 60,	-- Enchant Cloak - Greater Speed
+	[47899] = 60,	-- Enchant Cloak - Wisdom
+	[59619] = 60,	-- Enchant Weapon - Accuracy
+	[59621] = 60,	-- Enchant Weapon - Berserking
+	[59625] = 60,	-- Enchant Weapon - Black Magic
+	[60621] = 60,	-- Enchant Weapon - Greater Potency
+	[60691] = 60,	-- Enchant 2H Weapon - Massacre
+	[60692] = 60,	-- Enchant Chest - Powerful Stats
+	[60707] = 60,	-- Enchant Weapon - Superior Potency
+	[60714] = 60,	-- Enchant Weapon - Mighty Spellpower
+	[60763] = 60,	-- Enchant Boots - Greater Assault
+	[60767] = 60,	-- Enchant Bracers - Superior Spellpower
+	[62256] = 60,	-- Enchant Bracers - Major Stamina
+	[62257] = 60,	-- Enchant Weapon - Titanguard
 }
 
 local Difficulty = {
@@ -100,49 +171,49 @@ local defaults = {
 -------------------------------------------------------------------------------
 local isHandled = false		-- For HandleModifiedItemClick kludge...
 local recipes = {}
-local valNames = {}
+local name_pair = {}
 local db
 
 -------------------------------------------------------------------------------
 -- Local functions
 -------------------------------------------------------------------------------
-local function SetTradeSkill(tradeSkill)
-	CastSpellByName(tradeSkill)
+local function SetTradeSkill(prof)
+	CastSpellByName(prof)
 	CloseTradeSkill()
 end
 
-local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
-	local hasArrow = false
-	local subMenu = {}
+local function AddRecipe(prof, skill_name, func, skill_idx, num_avail)
+	local has_arrow = false
+	local sub_menu = {}
 
-	if (tradeSkill ~= GetSpellInfo(7411)) and (numAvailable > 1) then
-		hasArrow = true
-		tinsert(subMenu,
+	if (prof ~= GetSpellInfo(7411)) and (num_avail > 1) then
+		has_arrow = true
+		tinsert(sub_menu,
 			{
 				text = L["All"],
 				func = function()
-					       SetTradeSkill(tradeSkill)
-					       DoTradeSkill(skillIndex, numAvailable)
-					       dewdrop:Close()
+					       SetTradeSkill(prof)
+					       DoTradeSkill(skill_idx, num_avail)
+					       Dewdrop:Close()
 				       end,
-				tooltipText = L["Create every"].." "..text.normal.." "..L["you have reagents for."]
+				tooltipText = L["Create every"].." "..skill_name.normal.." "..L["you have reagents for."]
 			}
 		)
-		tinsert(subMenu,
+		tinsert(sub_menu,
 			{
-				text = " 1 - "..numAvailable,
-				tooltipText = L["Create"].." 1 - "..numAvailable.." "..text.normal..".",
+				text = " 1 - "..num_avail,
+				tooltipText = L["Create"].." 1 - "..num_avail.." "..skill_name.normal..".",
 				hasArrow = true,
 				hasEditBox = true,
 				editBoxFunc = function(text)
-						      SetTradeSkill(tradeSkill)
-						      DoTradeSkill(skillIndex, tonumber(text))
-						      dewdrop:Close()
+						      SetTradeSkill(prof)
+						      DoTradeSkill(skill_idx, tonumber(text))
+						      Dewdrop:Close()
 						      return value
 					      end,
 				editBoxValidateFunc = function(text)
 							      local val = tonumber(text)
-							      return (val >= 1) and (val <= numAvailable)
+							      return (val >= 1) and (val <= num_avail)
 						      end,
 			}
 		)
@@ -150,20 +221,20 @@ local function AddRecipe(tradeSkill, text, func, skillIndex, numAvailable)
 
 	if recipes["Nothing"] then wipe(recipes) end
 
-	local itemLink = GetTradeSkillItemLink(skillIndex)
-	local enchantLink = GetTradeSkillRecipeLink(skillIndex)
+	local item_link = GetTradeSkillItemLink(skill_idx)
+	local ench_link = GetTradeSkillRecipeLink(skill_idx)
 
-	recipes[text.normal] =	{
-		text = text.color,
+	recipes[skill_name.normal] =	{
+		text = skill_name.color,
 		func = func,
-		hasArrow = hasArrow,
-		icon = select(10, GetItemInfo(itemLink)) or GetTradeSkillIcon(skillIndex),
+		hasArrow = has_arrow,
+		icon = select(10, GetItemInfo(item_link)) or GetTradeSkillIcon(skill_idx),
 		iconWidth = 16,
 		iconHeight = 16,
 		tooltipFunc = GameTooltip.SetHyperlink,
 		tooltipArg1 = GameTooltip,
-		tooltipArg2 = (itemLink or enchantLink),
-		subMenu = subMenu
+		tooltipArg2 = (item_link or ench_link),
+		subMenu = sub_menu
 	}
 end
 
@@ -176,74 +247,85 @@ local function IsReagent(item, recipe)
 	return false
 end
 
-local function IterTrade(tradeSkill, skillNum, reference, skillName, numAvailable, single)
-	if (numAvailable < 1) or (not IsReagent(reference, skillNum)) then return end
+local function IterTrade(prof, skill_idx, reference, skill_name, num_avail, level, single)
+	if (num_avail < 1) or (not IsReagent(reference, skill_idx)) then return end
 	local func =
 		function()
-			SetTradeSkill(tradeSkill)
-			DoTradeSkill(skillNum, 1)
-			dewdrop:Close()
+			SetTradeSkill(prof)
+			DoTradeSkill(skill_idx, 1)
+			Dewdrop:Close()
 		end
 
-	AddRecipe(tradeSkill, skillName, func, skillNum, single and 1 or numAvailable)
+	AddRecipe(prof, skill_name, func, skill_idx, single and 1 or num_avail)
 end
 
-local function IterEnchant(tradeSkill, skillNum, reference, skillName, numAvailable, single)
-	if (numAvailable < 1) then return end
+local function IterEnchant(prof, skill_idx, reference, skill_name, num_avail, level, single)
+	if (num_avail < 1) then return end
 
 	local ref = EquipSlot[reference]
 	local found = false
 
 	if (reference == "INVTYPE_WEAPON") or (reference == "INVTYPE_WEAPONMAINHAND") or (reference == "INVTYPE_WEAPONOFFHAND") then
-		if (strfind(skillName.normal, EquipSlot["INVTYPE_2HWEAPON"]) == nil) and (strfind(skillName.normal, ref) ~= nil) then
+		if (strfind(skill_name.normal, EquipSlot["INVTYPE_2HWEAPON"]) == nil) and (strfind(skill_name.normal, ref) ~= nil) then
 			found = true
 		end
-	elseif (strfind(skillName.normal, ref) ~= nil) then
+	elseif (reference == "INVTYPE_2HWEAPON") then
+		if (strfind(skill_name.normal, ref) ~= nil) or (strfind(skill_name.normal, EquipSlot["INVTYPE_WEAPON"]) ~= nil) then
+			found = true
+		end
+	elseif (strfind(skill_name.normal, ref) ~= nil) then
 		found = true
 	end
 
 	if not found then return end
+
+	local _, _, ench_str = string.find(GetTradeSkillRecipeLink(skill_idx), "^|%x+|H(.+)|h%[.+%]")
+	local _, ench_num = strsplit(":", ench_str)
+	local ench_level = EnchantLevel[tonumber(ench_num)]
+
+	if ench_level and ench_level > level then return end
+
 	local func =
 		function()
-			SetTradeSkill(tradeSkill)
-			DoTradeSkill(skillNum, 1)
-			dewdrop:Close()
+			SetTradeSkill(prof)
+			DoTradeSkill(skill_idx, 1)
+			Dewdrop:Close()
 		end
-	AddRecipe(tradeSkill, skillName, func, skillNum, 1)
+	AddRecipe(prof, skill_name, func, skill_idx, 1)
 end
 
-local function Scan(tradeSkill, reference, single)
-	CastSpellByName(tradeSkill)
+local function Scan(prof, reference, level, single)
+	CastSpellByName(prof)
 	if (ATSW_SkipSlowScan ~= nil) then ATSW_SkipSlowScan() end
 
 	local func = IterTrade
 
-	if (tradeSkill == GetSpellInfo(7411)) and EquipSlot[reference] then func = IterEnchant end
+	if (prof == GetSpellInfo(7411)) and EquipSlot[reference] then func = IterEnchant end
 
 	for i = 1, GetNumTradeSkills() do
-		local skillName, skillType, numAvailable, _ = GetTradeSkillInfo(i)
-		if skillType ~= "header" then
-			valNames.normal = skillName
-			valNames.color = Difficulty[skillType]..skillName.."|r"
-			func(tradeSkill, i, reference, valNames, numAvailable, single)
+		local skill_name, skill_type, num_avail, _ = GetTradeSkillInfo(i)
+		if skill_type ~= "header" then
+			name_pair.normal = skill_name
+			name_pair.color = Difficulty[skill_type]..skill_name.."|r"
+			func(prof, i, reference, name_pair, num_avail, level, single)
 		end
 	end
 	CloseTradeSkill()
 end
 
 -- I robbed Ackis!
-local function GetKnown(ProfTable)
+local function GetKnown()
 	-- Reset the table, they may have unlearnt a profession
-	for i in pairs(ProfTable) do ProfTable[i] = false end
+	for i in pairs(Professions) do Professions[i] = false end
 
 	-- Grab names from the spell book
 	for index = 1, 25, 1 do
-		local spellName = GetSpellName(index, BOOKTYPE_SPELL)
+		local spell_name = GetSpellName(index, BOOKTYPE_SPELL)
 
-		if (not spellName) or (index == 25) then break end
+		if (not spell_name) or (index == 25) then break end
 
-		if (ProfTable[spellName] == false) then
-			ProfTable[spellName] = true
+		if (Professions[spell_name] == false) then
+			Professions[spell_name] = true
 		end
 	end
 end
@@ -292,33 +374,33 @@ function Revelation:Menu(focus, item)
 	recipes = {
 		["Nothing"] = {
 			text = L["Either no recipe or no reagents were found."],
-			func = function() dewdrop:Close() end,
+			func = function() Dewdrop:Close() end,
 			hasArrow = false
 		}
 	}
-	GetKnown(Professions)
+	GetKnown()
 
-	local itemName, _, _, _, _, itemType, _, _, itemEquipLoc, _ = GetItemInfo(item)
+	local item_name, _, _, item_level, _, item_type, item_stype, _, item_eqloc, _ = GetItemInfo(item)
 
-	if (itemType == L["Armor"]) or (itemType == L["Weapon"]) then
+	if (item_type == L["Armor"]) or (item_type == L["Weapon"]) then
 		local ench = GetSpellInfo(7411)
 		local scribe = GetSpellInfo(45357)
 		local rune = GetSpellInfo(53428)
 		if (Professions[ench] == true) then
-			Scan(ench, itemEquipLoc, true)
+			Scan(ench, item_eqloc, item_level, true)
 		end
 		if (Professions[scribe] == true) then
-			Scan(scribe, itemEquipLoc, true)
+			Scan(scribe, item_eqloc, item_level, true)
 		end
 		if (Professions[rune] == true) then
-			Scan(rune, itemEquipLoc, true)
+			Scan(rune, item_eqloc, item_level, true)
 		end
 	else
 		for key, val in pairs(Professions) do
-			if val == true then Scan(key, itemName, false) end
+			if val == true then Scan(key, item_name, 1, false) end
 		end
 	end
-	dewdrop:Open(focus, "children", function() dewdrop:FeedTable(recipes) end)
+	Dewdrop:Open(focus, "children", function() Dewdrop:FeedTable(recipes) end)
 end
 
 -------------------------------------------------------------------------------
