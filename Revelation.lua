@@ -39,6 +39,14 @@ local EquipSlot = {
 	["INVTYPE_WEAPONOFFHAND"]	= L["Weapon"]
 }
 
+local ArmorEnch = {
+	L["Chest"], L["Boots"], L["Bracer"], L["Gloves"], L["Ring"], L["Cloak"], L["Shield"]
+}
+
+local WeaponEnch = {
+	L["2H Weapon"], L["Weapon"]
+}
+
 local Professions = {
 	[GetSpellInfo(2259)]	= false, -- Alchemy
 	[GetSpellInfo(2018)]	= false, -- Blacksmithing
@@ -56,6 +64,7 @@ local Professions = {
 
 local EnchantLevel = {
 	[25086] = 35,	-- Enchant Cloak - Dodge
+	[27899] = 35,	-- Enchant Bracer - Brawn
 	[27906] = 35,	-- Enchant Bracer - Major Defense
 	[27911] = 35,	-- Enchant Bracer - Superior Healing
 	[27913] = 35,	-- Enchant Bracer - Restore Mana Prime
@@ -70,6 +79,8 @@ local EnchantLevel = {
 	[27950] = 35,	-- Enchant Boots - Fortitude
 	[27951] = 35,	-- Enchant Boots - Dexterity
 	[27954] = 35,	-- Enchant Boots - Surefooted
+	[27958] = 60,	-- Enchant Chest - Exceptional Mana
+	[27961] = 35,	-- Enchant Cloak - Major Armor
 	[27962] = 35,	-- Enchant Cloak - Major Resistance
 	[27967] = 35,	-- Enchant Weapon - Major Striking
 	[27968] = 35,	-- Enchant Weapon - Major Intellect
@@ -81,10 +92,17 @@ local EnchantLevel = {
 	[27984] = 35,	-- Enchant Weapon - Mongoose
 	[28003] = 35,	-- Enchant Weapon - Spellsurge
 	[28004] = 35,	-- Enchant Weapon - Battlemaster
+	[33990] = 35,	-- Enchant Chest - Major Spirit
+	[33991] = 35,	-- Enchant Chest - Restore Mana Prime
 	[33992] = 35,	-- Enchant Chest - Major Resilience
+	[33993] = 35,	-- Enchant Gloves - Blasting
 	[33994] = 35,	-- Enchant Gloves - Precise Strikes
+	[33995] = 35,	-- Enchant Gloves - Major Strength
+	[33996] = 35,	-- Enchant Gloves - Assault
 	[33997] = 35,	-- Enchant Gloves - Major Spellpower
 	[33999] = 35,	-- Enchant Gloves - Major Healing
+	[34001] = 35,	-- Enchant Bracer - Major Intellect
+	[34002] = 35,	-- Enchant Bracer - Assault
 	[34003] = 35,	-- Enchant Cloak - Spell Penetration
 	[34005] = 35,	-- Enchant Cloak - Greater Arcane Resistance
 	[34006] = 35,	-- Enchant Cloak - Greater Shadow Resistance
@@ -93,16 +111,21 @@ local EnchantLevel = {
 	[34010] = 35,	-- Enchant Weapon - Major Healing
 	[42620] = 35,	-- Enchant Weapon - Greater Agility
 	[42974] = 60,	-- Enchant Weapon - Executioner
+	[44383] = 35,	-- Enchant Shield - Resilience
 	[44483] = 60,	-- Enchant Cloak - Superior Frost Resistance
 	[44494] = 60,	-- Enchant Cloak - Superior Nature Resistance
+	[44506] = 60,	-- Enchant Gloves - Gatherer
 	[44524] = 60,	-- Enchant Weapon - Icebreaker
+	[44555] = 60,	-- Enchant Bracers - Exceptional Intellect
 	[44575] = 60,	-- Enchant Bracers - Greater Assault
 	[44576] = 60,	-- Enchant Weapon - Lifeward
 	[44590] = 60,	-- Enchant Cloak - Superior Shadow Resistance
 	[44591] = 60,	-- Enchant Cloak - Titanweave
+	[44592] = 60,	-- Enchant Gloves - Exceptional Spellpower
 	[44595] = 60,	-- Enchant 2H Weapon - Scourgebane
 	[44596] = 60,	-- Enchant Cloak - Superior Arcane Resistance
 	[44621] = 60,	-- Enchant Weapon - Giant Slayer
+	[44623] = 60,	-- Enchant Chest - Super Stats
 	[44625] = 60,	-- Enchant Gloves - Armsman
 	[44631] = 60,	-- Enchant Cloak - Shadow Armor
 	[46578] = 60,	-- Enchant Weapon - Deathfrost
@@ -114,6 +137,9 @@ local EnchantLevel = {
 	[59619] = 60,	-- Enchant Weapon - Accuracy
 	[59621] = 60,	-- Enchant Weapon - Berserking
 	[59625] = 60,	-- Enchant Weapon - Black Magic
+	[60606] = 60,	-- Enchant Boots - Assault
+	[60609] = 60,	-- Enchant Cloak - Speed
+	[60616] = 60,	-- Enchant Bracers - Striking
 	[60621] = 60,	-- Enchant Weapon - Greater Potency
 	[60691] = 60,	-- Enchant 2H Weapon - Massacre
 	[60692] = 60,	-- Enchant Chest - Powerful Stats
@@ -132,8 +158,6 @@ local Difficulty = {
 	["optimal"]	= "|cffff8040",
 }
 
-local function ReturnTrue() return true end
-
 local ButtonName = {
 	[1] = L["Left Button"],
 	[2] = L["Right Button"]
@@ -149,13 +173,6 @@ local ModifierName = {
 	[2] = L["CTRL"],
 	[3] = L["SHIFT"],
 	[4] = L["NONE"]
-}
-
-local ModifierKey = {
-	[1] = IsAltKeyDown,	-- ALT
-	[2] = IsControlKeyDown,	-- CTRL
-	[3] = IsShiftKeyDown,	-- SHIFT
-	[4] = ReturnTrue	-- NONE
 }
 
 local defaults = {
@@ -177,6 +194,18 @@ local db
 -------------------------------------------------------------------------------
 -- Local functions
 -------------------------------------------------------------------------------
+local function ModifiersPressed()
+	local ModifierKey = {
+		[1] = IsAltKeyDown,	-- ALT
+		[2] = IsControlKeyDown,	-- CTRL
+		[3] = IsShiftKeyDown,	-- SHIFT
+	}
+	local mod, mod2 = db.modifier, db.modifier2
+	local retval = (mod == 4) or ModifierKey[mod]()
+	local retval2 = (mod2 == 4) or ModifierKey[mod2]()
+	return retval and retval2
+end
+
 local function SetTradeSkill(prof)
 	CastSpellByName(prof)
 	CloseTradeSkill()
@@ -262,18 +291,32 @@ end
 local function IterEnchant(prof, skill_idx, reference, skill_name, num_avail, level, single)
 	if (num_avail < 1) then return end
 
-	local ref = EquipSlot[reference]
+	local eqref = EquipSlot[reference]
 	local found = false
 
-	if (reference == "INVTYPE_WEAPON") or (reference == "INVTYPE_WEAPONMAINHAND") or (reference == "INVTYPE_WEAPONOFFHAND") then
-		if (strfind(skill_name.normal, EquipSlot["INVTYPE_2HWEAPON"]) == nil) and (strfind(skill_name.normal, ref) ~= nil) then
+	if (eqref == nil) and (strfind(reference, L["Armor Vellum"]) ~= nil) then
+		for k, v in pairs(ArmorEnch) do
+			if strfind(skill_name.normal, v) ~= nil then
+				found = true
+				break
+			end
+		end
+	elseif (eqref == nil) and (strfind(reference, L["Weapon Vellum"]) ~= nil) then
+		for k, v in pairs(WeaponEnch) do
+			if strfind(skill_name.normal, v) ~= nil then
+				found = true
+				break
+			end
+		end
+	elseif (reference == "INVTYPE_WEAPON") or (reference == "INVTYPE_WEAPONMAINHAND") or (reference == "INVTYPE_WEAPONOFFHAND") then
+		if (strfind(skill_name.normal, EquipSlot["INVTYPE_2HWEAPON"]) == nil) and (strfind(skill_name.normal, eqref) ~= nil) then
 			found = true
 		end
 	elseif (reference == "INVTYPE_2HWEAPON") then
-		if (strfind(skill_name.normal, ref) ~= nil) or (strfind(skill_name.normal, EquipSlot["INVTYPE_WEAPON"]) ~= nil) then
+		if (strfind(skill_name.normal, eqref) ~= nil) or (strfind(skill_name.normal, EquipSlot["INVTYPE_WEAPON"]) ~= nil) then
 			found = true
 		end
-	elseif (strfind(skill_name.normal, ref) ~= nil) then
+	elseif strfind(skill_name.normal, eqref) ~= nil then
 		found = true
 	end
 
@@ -284,6 +327,7 @@ local function IterEnchant(prof, skill_idx, reference, skill_name, num_avail, le
 	local ench_level = EnchantLevel[tonumber(ench_num)]
 
 	if ench_level and ench_level > level then return end
+--	print(ench_str.." - "..skill_name.normal)
 
 	local func =
 		function()
@@ -300,7 +344,10 @@ local function Scan(prof, reference, level, single)
 
 	local func = IterTrade
 
-	if (prof == GetSpellInfo(7411)) and EquipSlot[reference] then func = IterEnchant end
+	if ((prof == GetSpellInfo(7411)) and
+	    (EquipSlot[reference] or
+	     ((strfind(reference, L["Armor Vellum"]) ~= nil) or
+	      (strfind(reference, L["Weapon Vellum"]) ~= nil)))) then func = IterEnchant end
 
 	for i = 1, GetNumTradeSkills() do
 		local skill_name, skill_type, num_avail, _ = GetTradeSkillInfo(i)
@@ -367,7 +414,7 @@ end
 function Revelation:Menu(focus, item)
 	if (item == nil) then return end
 	if (focus == nil) then
-		if (not ModifierKey[db.modifier]()) and (not ModifierKey[db.modifier2]()) then return end	-- Enforce for HandleModifiedItemClick
+		if not ModifiersPressed() then return end	-- Enforce for HandleModifiedItemClick
 		focus = GetMouseFocus()
 	end
 
@@ -381,9 +428,9 @@ function Revelation:Menu(focus, item)
 	GetKnown()
 
 	local item_name, _, _, item_level, _, item_type, item_stype, _, item_eqloc, _ = GetItemInfo(item)
+	local ench = GetSpellInfo(7411)
 
 	if (item_type == L["Armor"]) or (item_type == L["Weapon"]) then
-		local ench = GetSpellInfo(7411)
 		local scribe = GetSpellInfo(45357)
 		local rune = GetSpellInfo(53428)
 		if (Professions[ench] == true) then
@@ -394,6 +441,10 @@ function Revelation:Menu(focus, item)
 		end
 		if (Professions[rune] == true) then
 			Scan(rune, item_eqloc, item_level, true)
+		end
+	elseif item_type == L["Trade Goods"] and ((item_stype == L["Armor Enchantment"]) or (item_stype == L["Weapon Enchantment"])) then
+		if (Professions[ench] == true) then
+			Scan(ench, item_name, max(1, item_level - 5), true)	-- Vellum item levels are 5 higher than the enchant which can be put on them.
 		end
 	else
 		for key, val in pairs(Professions) do
@@ -409,7 +460,7 @@ end
 function Revelation:PaperDollItemSlotButton_OnModifiedClick(...)
 	local hookSelf, button = ...
 	isHandled = true
-	if (ModifierKey[db.modifier]() and ModifierKey[db.modifier2]() and (button == MouseButton[db.button])) then
+	if (ModifiersPressed() and (button == MouseButton[db.button])) then
 		self:Menu(hookSelf, GetInventoryItemLink("player", hookSelf:GetID()))
 	else
 		self.hooks.PaperDollItemSlotButton_OnModifiedClick(...)
@@ -421,7 +472,7 @@ function Revelation:ContainerFrameItemButton_OnModifiedClick(...)
 	local hookSelf, button = ...
 	isHandled = true
 
-	if (ModifierKey[db.modifier]() and ModifierKey[db.modifier2]() and (button == MouseButton[db.button])) then
+	if (ModifiersPressed() and (button == MouseButton[db.button])) then
 		self:Menu(hookSelf, GetContainerItemLink(hookSelf:GetParent():GetID(), hookSelf:GetID()))
 	end
 	self.hooks.ContainerFrameItemButton_OnModifiedClick(...)
