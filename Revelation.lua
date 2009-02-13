@@ -430,7 +430,7 @@ function Revelation:Menu(focus, item)
 	local item_name, _, _, item_level, _, item_type, item_stype, _, item_eqloc, _ = GetItemInfo(item)
 	local ench = GetSpellInfo(7411)
 
-	if (item_type == L["Armor"]) or strfind(item_type, L["Weapon"] ~= nil) then
+	if (item_type == L["Armor"]) or (strfind(item_type, L["Weapon"]) ~= nil) then
 		local scribe = GetSpellInfo(45357)
 		local rune = GetSpellInfo(53428)
 		if (Professions[ench] == true) then
