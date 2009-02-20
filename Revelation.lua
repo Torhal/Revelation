@@ -369,7 +369,7 @@ local function IterEnchant(prof, skill_idx, reference, skill_name, num_avail, le
 	local ench_level = EnchantLevel[tonumber(ench_num)]
 
 	if ench_level and ench_level > level then return end
-	print(ench_str.." - "..skill_name.normal)
+--	print(ench_str.." - "..skill_name.normal)
 
 	local func =
 		function()
