@@ -62,6 +62,8 @@ local defaults = {
 	}
 }
 
+local ENCHANTING_IDX = 7411
+
 -------------------------------------------------------------------------------
 -- Variables
 -------------------------------------------------------------------------------
@@ -103,7 +105,7 @@ local function AddRecipe(prof, skill_name, func, skill_idx, num_avail)
 	local has_arrow = false
 	local sub_menu = AcquireTable()
 
-	if (prof ~= GetSpellInfo(7411)) and (num_avail > 1) then
+	if (prof ~= GetSpellInfo(ENCHANTING_IDX)) and (num_avail > 1) then
 		has_arrow = true
 
 		local entry = AcquireTable()
@@ -314,7 +316,8 @@ do
 				[44596] = 60,	-- Enchant Cloak - Superior Arcane Resistance
 				[44598] = 60,	-- Enchant Bracers - Expertise
 				[44612] = 60,	-- Enchant Gloves - Greater Blasting
-				[44616] = 60,	-- Enchant Bracers - Greater Stats
+				[44616] = 60,	-- Enchant Bracers - Greater Statslocal Revelation = LibStub("AceAddon-3.0"):NewAddon(NAME, "AceHook-3.0")
+
 				[44621] = 60,	-- Enchant Weapon - Giant Slayer
 				[44623] = 60,	-- Enchant Chest - Super Stats
 				[44625] = 60,	-- Enchant Gloves - Armsman
@@ -387,7 +390,7 @@ do
 
 		func = IterTrade
 
-		if ((prof == GetSpellInfo(7411)) and
+		if ((prof == GetSpellInfo(ENCHANTING_IDX)) and
 		    (EquipSlot[reference] or
 		     ((strfind(reference, L["Armor Vellum"]) ~= nil) or
 		      (strfind(reference, L["Weapon Vellum"]) ~= nil)))) then func = IterEnchant end
@@ -469,7 +472,7 @@ do
 		end
 
 		local item_name, _, _, item_level, _, item_type, item_stype, _, item_eqloc, _ = GetItemInfo(item)
-		local ench = GetSpellInfo(7411)
+		local ench = GetSpellInfo(ENCHANTING_IDX)
 
 		if (item_type == L["Armor"]) or (strfind(item_type, L["Weapon"]) ~= nil) then
 			local scribe = GetSpellInfo(45357)
