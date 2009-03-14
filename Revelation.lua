@@ -2,11 +2,29 @@
 -- Localized globals
 -------------------------------------------------------------------------------
 local _G = getfenv(0)
-local strfind, strsub = _G.string.find, _G.string.sub
-local pairs, ipairs, tinsert = _G.pairs, _G.ipairs, _G.table.insert
+local max = _G.max
+local pairs, ipairs = _G.pairs, _G.ipairs
+local strfind, strsub, strsplit = _G.string.find, _G.string.sub, _G.string.split
+local tonumber = _G.tonumber
+local tinsert, tremove = _G.table.insert, _G.table.remove
+local wipe = _G.wipe
+local select = _G.select
+local CastSpellByName = _G.CastSpellByName
+local CloseTradeSkill, DoTradeSkill = _G.CloseTradeSkill, _G.DoTradeSkill
 local GameTooltip, GetSpellInfo = _G.GameTooltip, _G.GetSpellInfo
+local GetContainerItemLink = _G.GetContainerItemLink
+local GetInventoryItemLink = _G.GetInventoryItemLink
+local GetItemInfo = _G.GetItemInfo
+local GetMouseFocus = _G.GetMouseFocus
+local GetNumTradeSkills = _G.GetNumTradeSkills
+local GetTradeSkillIcon = _G.GetTradeSkillIcon
+local GetTradeSkillInfo = _G.GetTradeSkillInfo
 local GetTradeSkillItemLink = _G.GetTradeSkillItemLink
+local GetTradeSkillNumReagents = _G.GetTradeSkillNumReagents
+local GetTradeSkillReagentInfo = _G.GetTradeSkillReagentInfo
 local GetTradeSkillRecipeLink = _G.GetTradeSkillRecipeLink
+local BOOKTYPE_SPELL = _G.BOOKTYPE_SPELL
+local LibStub = _G.LibStub
 
 -------------------------------------------------------------------------------
 -- AddOn namespace
@@ -38,20 +56,23 @@ local EquipSlot = {
 	["INVTYPE_WEAPONMAINHAND"]	= L["Weapon"],
 	["INVTYPE_WEAPONOFFHAND"]	= L["Weapon"]
 }
+local PROF_ENCHANTING = GetSpellInfo(7411)
+local PROF_INSCRIPTION = GetSpellInfo(45357)
+local PROF_RUNEFORGING = GetSpellInfo(53428)
 
 local Professions = {
 	[GetSpellInfo(2259)]	= false, -- Alchemy
 	[GetSpellInfo(2018)]	= false, -- Blacksmithing
 	[GetSpellInfo(2550)]	= false, -- Cooking
-	[GetSpellInfo(7411)]	= false, -- Enchanting
+	[PROF_ENCHANTING]	= false, -- Enchanting
 	[GetSpellInfo(4036)]	= false, -- Engineering
 	[GetSpellInfo(746)]	= false, -- First Aid
 	[GetSpellInfo(2108)]	= false, -- Leatherworking
 	[GetSpellInfo(61422)]	= false, -- Smelting
 	[GetSpellInfo(3908)]	= false, -- Tailoring
 	[GetSpellInfo(25229)]	= false, -- Jewelcrafting
-	[GetSpellInfo(45357)]	= false, -- Inscription
-	[GetSpellInfo(53428)]	= false, -- Runeforging
+	[PROF_INSCRIPTION]	= false, -- Inscription
+	[PROF_RUNEFORGING]	= false, -- Runeforging
 }
 
 local defaults = {
@@ -62,14 +83,13 @@ local defaults = {
 	}
 }
 
-local ENCHANTING_IDX = 7411
-
 -------------------------------------------------------------------------------
 -- Variables
 -------------------------------------------------------------------------------
 local recipes = {}
 local table_heap = {}
 local active_tables = {}
+local icons = {}
 local db
 
 -------------------------------------------------------------------------------
@@ -101,35 +121,40 @@ local function AcquireTable()
 	return tbl
 end
 
-local function AddRecipe(prof, skill_name, func, skill_idx, num_avail)
+local function CraftItem(prof, skill_idx, amount)
+	SetTradeSkill(prof)
+	DoTradeSkill(skill_idx, amount)
+	Dewdrop:Close()
+end
+
+local function AddRecipe(prof, skill_name, skill_idx, num_avail)
 	local has_arrow = false
 	local sub_menu = AcquireTable()
+	local normal_name = skill_name.normal
 
-	if (prof ~= GetSpellInfo(ENCHANTING_IDX)) and (num_avail > 1) then
+	if (prof ~= PROF_ENCHANTING) and (num_avail > 1) then
 		has_arrow = true
 
 		local entry = AcquireTable()
 		entry.text = L["All"]
-		entry.func = function()
-				     SetTradeSkill(prof)
-				     DoTradeSkill(skill_idx, num_avail)
-				     Dewdrop:Close()
-			     end
-		entry.tooltipText = L["Create every"].." "..skill_name.normal.." "..L["you have reagents for."]
+		entry.func = CraftItem
+		entry.arg1 = prof
+		entry.arg2 = skill_idx
+		entry.arg3 = num_avail
+
+		entry.tooltipText = L["Create every"].." "..normal_name.." "..L["you have reagents for."]
 		tinsert(sub_menu, entry)
 
 		local entry2 = AcquireTable()
 		entry2.text = " 1 - "..num_avail
 		entry2.func = nil
-		entry2.tooltipText = L["Create"].." 1 - "..num_avail.." "..skill_name.normal.."."
+		entry2.tooltipText = L["Create"].." 1 - "..num_avail.." "..normal_name.."."
 		entry2.hasArrow = true
 		entry2.hasEditBox = true
-		entry2.editBoxFunc = function(text)
-					     SetTradeSkill(prof)
-					     DoTradeSkill(skill_idx, tonumber(text))
-					     Dewdrop:Close()
-					     return value
-				     end
+		entry2.editBoxFunc = CraftItem
+		entry2.editBoxArg1 = prof
+		entry2.editBoxArg2 = skill_idx
+		entry2.editBoxArg3 = tonumber(editBoxText)
 		entry2.editBoxValidateFunc = function(text)
 						     local val = tonumber(text)
 						     return (val >= 1) and (val <= num_avail)
@@ -142,18 +167,32 @@ local function AddRecipe(prof, skill_name, func, skill_idx, num_avail)
 	local item_link = GetTradeSkillItemLink(skill_idx)
 	local ench_link = GetTradeSkillRecipeLink(skill_idx)
 
-	recipes[skill_name.normal] = {
-		text = skill_name.color,
-		func = func,
-		hasArrow = has_arrow,
-		icon = select(10, GetItemInfo(item_link)) or GetTradeSkillIcon(skill_idx),
-		iconWidth = 16,
-		iconHeight = 16,
-		tooltipFunc = GameTooltip.SetHyperlink,
-		tooltipArg1 = GameTooltip,
-		tooltipArg2 = (item_link or ench_link),
-		subMenu = sub_menu
-	}
+	if not icons[normal_name] then
+		icons[normal_name] = select(10, GetItemInfo(item_link)) or GetTradeSkillIcon(skill_idx)
+	end
+
+	local new_recipe = AcquireTable()
+	new_recipe.text = skill_name.color
+	--[[
+	new_recipe.func = function()
+				  SetTradeSkill(prof)
+				  DoTradeSkill(skill_idx, 1)
+				  Dewdrop:Close()
+			  end
+	--]]
+	new_recipe.func = CraftItem
+	new_recipe.arg1 = prof
+	new_recipe.arg2 = skill_idx
+	new_recipe.arg3 = 1
+	new_recipe.hasArrow = has_arrow
+	new_recipe.icon = icons[normal_name]
+	new_recipe.iconWidth = 16
+	new_recipe.iconHeight = 16
+	new_recipe.tooltipFunc = GameTooltip.SetHyperlink
+	new_recipe.tooltipArg1 = GameTooltip
+	new_recipe.tooltipArg2 = (item_link or ench_link)
+	new_recipe.subMenu = sub_menu
+	recipes[normal_name] = new_recipe
 end
 
 local function IsReagent(item, recipe)
@@ -167,14 +206,7 @@ end
 
 local function IterTrade(prof, skill_idx, reference, skill_name, num_avail, level, single)
 	if (num_avail < 1) or (not IsReagent(reference, skill_idx)) then return end
-	local func =
-		function()
-			SetTradeSkill(prof)
-			DoTradeSkill(skill_idx, 1)
-			Dewdrop:Close()
-		end
-
-	AddRecipe(prof, skill_name, func, skill_idx, single and 1 or num_avail)
+	AddRecipe(prof, skill_name, skill_idx, single and 1 or num_avail)
 end
 
 local IterEnchant
@@ -193,36 +225,37 @@ do
 
 		local eqref = EquipSlot[reference]
 		local found = false
+		local normal_name = skill_name.normal
 
 		if (eqref == nil) and (strfind(reference, L["Armor Vellum"]) ~= nil) then
 			for k, v in pairs(ArmorEnch) do
-				if strfind(skill_name.normal, v) ~= nil then
+				if strfind(normal_name, v) ~= nil then
 					found = true
 					break
 				end
 			end
 		elseif (eqref == nil) and (strfind(reference, L["Weapon Vellum"]) ~= nil) then
 			for k, v in pairs(WeaponEnch) do
-				if strfind(skill_name.normal, v) ~= nil then
+				if strfind(normal_name, v) ~= nil then
 					found = true
 					break
 				end
 			end
 		elseif (reference == "INVTYPE_WEAPON") or (reference == "INVTYPE_WEAPONMAINHAND") or (reference == "INVTYPE_WEAPONOFFHAND") then
-			if (strfind(skill_name.normal, EquipSlot["INVTYPE_2HWEAPON"]) == nil) and (strfind(skill_name.normal, eqref) ~= nil) then
+			if (strfind(normal_name, EquipSlot["INVTYPE_2HWEAPON"]) == nil) and (strfind(normal_name, eqref) ~= nil) then
 				found = true
 			end
 		elseif (reference == "INVTYPE_2HWEAPON") then
-			if (strfind(skill_name.normal, eqref) ~= nil) or (strfind(skill_name.normal, EquipSlot["INVTYPE_WEAPON"]) ~= nil) then
+			if (strfind(normal_name, eqref) ~= nil) or (strfind(normal_name, EquipSlot["INVTYPE_WEAPON"]) ~= nil) then
 				found = true
 			end
-		elseif strfind(skill_name.normal, eqref) ~= nil then
+		elseif strfind(normal_name, eqref) ~= nil then
 			found = true
 		end
 
 		if not found then return end
 
-		local _, _, ench_str = string.find(GetTradeSkillRecipeLink(skill_idx), "^|%x+|H(.+)|h%[.+%]")
+		local _, _, ench_str = strfind(GetTradeSkillRecipeLink(skill_idx), "^|%x+|H(.+)|h%[.+%]")
 		local _, ench_num = strsplit(":", ench_str)
 
 		if not EnchantLevel then
@@ -316,8 +349,7 @@ do
 				[44596] = 60,	-- Enchant Cloak - Superior Arcane Resistance
 				[44598] = 60,	-- Enchant Bracers - Expertise
 				[44612] = 60,	-- Enchant Gloves - Greater Blasting
-				[44616] = 60,	-- Enchant Bracers - Greater Statslocal Revelation = LibStub("AceAddon-3.0"):NewAddon(NAME, "AceHook-3.0")
-
+				[44616] = 60,	-- Enchant Bracers - Greater Stats
 				[44621] = 60,	-- Enchant Weapon - Giant Slayer
 				[44623] = 60,	-- Enchant Chest - Super Stats
 				[44625] = 60,	-- Enchant Gloves - Armsman
@@ -361,15 +393,8 @@ do
 		local ench_level = EnchantLevel[tonumber(ench_num)]
 
 		if ench_level and ench_level > level then return end
-		--	print(ench_str.." - "..skill_name.normal)
-
-		local func =
-			function()
-				SetTradeSkill(prof)
-				DoTradeSkill(skill_idx, 1)
-				Dewdrop:Close()
-			end
-		AddRecipe(prof, skill_name, func, skill_idx, 1)
+		--	print(ench_str.." - "..normal_name)
+		AddRecipe(prof, skill_name, skill_idx, 1)
 	end
 end
 
@@ -383,6 +408,7 @@ do
 	}
 	local name_pair = {}
 	local func
+	local ATSW_SkipSlowScan = _G.ATSW_SkipSlowScan
 
 	function Scan(prof, reference, level, single)
 		CastSpellByName(prof)
@@ -390,7 +416,7 @@ do
 
 		func = IterTrade
 
-		if ((prof == GetSpellInfo(ENCHANTING_IDX)) and
+		if ((prof == PROF_ENCHANTING) and
 		    (EquipSlot[reference] or
 		     ((strfind(reference, L["Armor Vellum"]) ~= nil) or
 		      (strfind(reference, L["Weapon Vellum"]) ~= nil)))) then func = IterEnchant end
@@ -472,23 +498,20 @@ do
 		end
 
 		local item_name, _, _, item_level, _, item_type, item_stype, _, item_eqloc, _ = GetItemInfo(item)
-		local ench = GetSpellInfo(ENCHANTING_IDX)
 
 		if (item_type == L["Armor"]) or (strfind(item_type, L["Weapon"]) ~= nil) then
-			local scribe = GetSpellInfo(45357)
-			local rune = GetSpellInfo(53428)
-			if (Professions[ench] == true) then
-				Scan(ench, item_eqloc, item_level, true)
+			if (Professions[PROF_ENCHANTING] == true) then
+				Scan(PROF_ENCHANTING, item_eqloc, item_level, true)
 			end
-			if (Professions[scribe] == true) then
-				Scan(scribe, item_eqloc, item_level, true)
+			if (Professions[PROF_INSCRIPTION] == true) then
+				Scan(PROF_INSCRIPTION, item_eqloc, item_level, true)
 			end
-			if (Professions[rune] == true) then
-				Scan(rune, item_eqloc, item_level, true)
+			if (Professions[PROF_RUNEFORGING] == true) then
+				Scan(PROF_RUNEFORGING, item_eqloc, item_level, true)
 			end
 		elseif item_type == L["Trade Goods"] and ((item_stype == L["Armor Enchantment"]) or (item_stype == L["Weapon Enchantment"])) then
-			if (Professions[ench] == true) then
-				Scan(ench, item_name, max(1, item_level - 5), true)	-- Vellum item levels are 5 higher than the enchant which can be put on them.
+			if (Professions[PROF_ENCHANTING] == true) then
+				Scan(PROF_ENCHANTING, item_name, max(1, item_level - 5), true)	-- Vellum item levels are 5 higher than the enchant which can be put on them.
 			end
 		else
 			for key, val in pairs(Professions) do
