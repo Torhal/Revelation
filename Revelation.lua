@@ -17,6 +17,7 @@ local GetInventoryItemLink = _G.GetInventoryItemLink
 local GetItemInfo = _G.GetItemInfo
 local GetMouseFocus = _G.GetMouseFocus
 local GetNumTradeSkills = _G.GetNumTradeSkills
+local GetSpellName = _G.GetSpellName
 local GetTradeSkillIcon = _G.GetTradeSkillIcon
 local GetTradeSkillInfo = _G.GetTradeSkillInfo
 local GetTradeSkillItemLink = _G.GetTradeSkillItemLink
@@ -127,6 +128,12 @@ local function CraftItem(prof, skill_idx, amount)
 	Dewdrop:Close()
 end
 
+local function IsValidRange(max, amount)
+	local n_amount = tonumber(amount)
+	local n_max = tonumber(max)
+	return n_amount >= 1 and n_amount <= n_max
+end
+
 local function AddRecipe(prof, skill_name, skill_idx, num_avail)
 	local has_arrow = false
 	local sub_menu = AcquireTable()
@@ -154,11 +161,10 @@ local function AddRecipe(prof, skill_name, skill_idx, num_avail)
 		entry2.editBoxFunc = CraftItem
 		entry2.editBoxArg1 = prof
 		entry2.editBoxArg2 = skill_idx
-		entry2.editBoxArg3 = tonumber(editBoxText)
-		entry2.editBoxValidateFunc = function(text)
-						     local val = tonumber(text)
-						     return (val >= 1) and (val <= num_avail)
-					     end
+		entry2.editBoxArg3 = editBoxText
+		entry2.editBoxValidateFunc = IsValidRange
+		entry2.editBoxValidateArg1 = num_avail
+		entry2.editBoxValidateArg2 = editBoxText
 		tinsert(sub_menu, entry2)
 	end
 
@@ -173,13 +179,6 @@ local function AddRecipe(prof, skill_name, skill_idx, num_avail)
 
 	local new_recipe = AcquireTable()
 	new_recipe.text = skill_name.color
-	--[[
-	new_recipe.func = function()
-				  SetTradeSkill(prof)
-				  DoTradeSkill(skill_idx, 1)
-				  Dewdrop:Close()
-			  end
-	--]]
 	new_recipe.func = CraftItem
 	new_recipe.arg1 = prof
 	new_recipe.arg2 = skill_idx
