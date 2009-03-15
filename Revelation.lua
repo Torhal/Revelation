@@ -90,7 +90,6 @@ local defaults = {
 local recipes = {}
 local table_heap = {}
 local active_tables = {}
-local icons = {}
 local db
 
 -------------------------------------------------------------------------------
@@ -111,101 +110,102 @@ do
 	end
 end
 
-local function SetTradeSkill(prof)
-	CastSpellByName(prof)
-	CloseTradeSkill()
-end
-
-local function AcquireTable()
-	local tbl = tremove(table_heap) or {}
-	active_tables[#active_tables + 1] = tbl
-	return tbl
-end
-
-local function CraftItem(prof, skill_idx, amount)
-	SetTradeSkill(prof)
-	DoTradeSkill(skill_idx, amount)
-	Dewdrop:Close()
-end
-
-local function IsValidRange(max, amount)
-	local n_amount = tonumber(amount)
-	local n_max = tonumber(max)
-	return n_amount >= 1 and n_amount <= n_max
-end
-
-local function AddRecipe(prof, skill_name, skill_idx, num_avail)
-	local has_arrow = false
-	local sub_menu = AcquireTable()
-	local normal_name = skill_name.normal
-
-	if (prof ~= PROF_ENCHANTING) and (num_avail > 1) then
-		has_arrow = true
-
-		local entry = AcquireTable()
-		entry.text = L["All"]
-		entry.func = CraftItem
-		entry.arg1 = prof
-		entry.arg2 = skill_idx
-		entry.arg3 = num_avail
-
-		entry.tooltipText = L["Create every"].." "..normal_name.." "..L["you have reagents for."]
-		tinsert(sub_menu, entry)
-
-		local entry2 = AcquireTable()
-		entry2.text = " 1 - "..num_avail
-		entry2.func = nil
-		entry2.tooltipText = L["Create"].." 1 - "..num_avail.." "..normal_name.."."
-		entry2.hasArrow = true
-		entry2.hasEditBox = true
-		entry2.editBoxFunc = CraftItem
-		entry2.editBoxArg1 = prof
-		entry2.editBoxArg2 = skill_idx
-		entry2.editBoxArg3 = editBoxText
-		entry2.editBoxValidateFunc = IsValidRange
-		entry2.editBoxValidateArg1 = num_avail
-		entry2.editBoxValidateArg2 = editBoxText
-		tinsert(sub_menu, entry2)
+local AddRecipe
+do
+	local function AcquireTable()
+		local tbl = tremove(table_heap) or {}
+		active_tables[#active_tables + 1] = tbl
+		return tbl
 	end
 
-	if recipes["Nothing"] then wipe(recipes) end
-
-	local item_link = GetTradeSkillItemLink(skill_idx)
-	local ench_link = GetTradeSkillRecipeLink(skill_idx)
-
-	if not icons[normal_name] then
-		icons[normal_name] = select(10, GetItemInfo(item_link)) or GetTradeSkillIcon(skill_idx)
+	local function CraftItem(prof, skill_idx, amount)
+		CastSpellByName(prof)
+		CloseTradeSkill()
+		DoTradeSkill(skill_idx, amount)
+		Dewdrop:Close()
 	end
 
-	local new_recipe = AcquireTable()
-	new_recipe.text = skill_name.color
-	new_recipe.func = CraftItem
-	new_recipe.arg1 = prof
-	new_recipe.arg2 = skill_idx
-	new_recipe.arg3 = 1
-	new_recipe.hasArrow = has_arrow
-	new_recipe.icon = icons[normal_name]
-	new_recipe.iconWidth = 16
-	new_recipe.iconHeight = 16
-	new_recipe.tooltipFunc = GameTooltip.SetHyperlink
-	new_recipe.tooltipArg1 = GameTooltip
-	new_recipe.tooltipArg2 = (item_link or ench_link)
-	new_recipe.subMenu = sub_menu
-	recipes[normal_name] = new_recipe
-end
-
-local function IsReagent(item, recipe)
-	local num = GetTradeSkillNumReagents(recipe)
-
-	for reagent = 1, num do
-		if item == GetTradeSkillReagentInfo(recipe, reagent) then return true end
+	local function IsValidRange(max, amount)
+		local n_amount = tonumber(amount)
+		local n_max = tonumber(max)
+		return n_amount >= 1 and n_amount <= n_max
 	end
-	return false
+
+	local icons = {}
+	function AddRecipe(prof, skill_name, skill_idx, num_avail)
+		local has_arrow = false
+		local sub_menu
+		local normal_name = skill_name.normal
+
+		if (prof ~= PROF_ENCHANTING) and (num_avail > 1) then
+			has_arrow = true
+			sub_menu = AcquireTable()
+
+			local entry = AcquireTable()
+			entry.text = L["All"]
+			entry.func = CraftItem
+			entry.arg1 = prof
+			entry.arg2 = skill_idx
+			entry.arg3 = num_avail
+
+			entry.tooltipText = L["Create every"].." "..normal_name.." "..L["you have reagents for."]
+			tinsert(sub_menu, entry)
+
+			local entry2 = AcquireTable()
+			entry2.text = " 1 - "..num_avail
+			entry2.func = nil
+			entry2.tooltipText = L["Create"].." 1 - "..num_avail.." "..normal_name.."."
+			entry2.hasArrow = true
+			entry2.hasEditBox = true
+			entry2.editBoxFunc = CraftItem
+			entry2.editBoxArg1 = prof
+			entry2.editBoxArg2 = skill_idx
+			entry2.editBoxArg3 = editBoxText
+			entry2.editBoxValidateFunc = IsValidRange
+			entry2.editBoxValidateArg1 = num_avail
+			entry2.editBoxValidateArg2 = editBoxText
+			tinsert(sub_menu, entry2)
+		end
+		local craft_link = GetTradeSkillItemLink(skill_idx) or GetTradeSkillRecipeLink(skill_idx)
+
+		if not icons[normal_name] then
+			icons[normal_name] = select(10, GetItemInfo(craft_link)) or GetTradeSkillIcon(skill_idx)
+		end
+		if recipes["Nothing"] then wipe(recipes) end
+
+		local new_recipe = AcquireTable()
+		new_recipe.text = skill_name.color
+		new_recipe.func = CraftItem
+		new_recipe.arg1 = prof
+		new_recipe.arg2 = skill_idx
+		new_recipe.arg3 = 1
+		new_recipe.hasArrow = has_arrow
+		new_recipe.icon = icons[normal_name]
+		new_recipe.iconWidth = 16
+		new_recipe.iconHeight = 16
+		new_recipe.tooltipFunc = GameTooltip.SetHyperlink
+		new_recipe.tooltipArg1 = GameTooltip
+		new_recipe.tooltipArg2 = craft_link
+		new_recipe.subMenu = sub_menu
+		recipes[normal_name] = new_recipe
+	end
 end
 
-local function IterTrade(prof, skill_idx, reference, skill_name, num_avail, level, single)
-	if (num_avail < 1) or (not IsReagent(reference, skill_idx)) then return end
-	AddRecipe(prof, skill_name, skill_idx, single and 1 or num_avail)
+local IterTrade
+do
+	local function IsReagent(item, recipe)
+		local num = GetTradeSkillNumReagents(recipe)
+
+		for reagent = 1, num do
+			if item == GetTradeSkillReagentInfo(recipe, reagent) then return true end
+		end
+		return false
+	end
+
+	function IterTrade(prof, skill_idx, reference, skill_name, num_avail, level, single)
+		if (num_avail < 1) or (not IsReagent(reference, skill_idx)) then return end
+		AddRecipe(prof, skill_name, skill_idx, single and 1 or num_avail)
+	end
 end
 
 local IterEnchant
@@ -253,9 +253,6 @@ do
 		end
 
 		if not found then return end
-
-		local _, _, ench_str = strfind(GetTradeSkillRecipeLink(skill_idx), "^|%x+|H(.+)|h%[.+%]")
-		local _, ench_num = strsplit(":", ench_str)
 
 		if not EnchantLevel then
 			EnchantLevel = {
@@ -389,6 +386,8 @@ do
 				[62257] = 60,	-- Enchant Weapon - Titanguard
 			}
 		end
+		local _, _, ench_str = strfind(GetTradeSkillRecipeLink(skill_idx), "^|%x+|H(.+)|h%[.+%]")
+		local _, ench_num = strsplit(":", ench_str)
 		local ench_level = EnchantLevel[tonumber(ench_num)]
 
 		if ench_level and ench_level > level then return end
@@ -486,6 +485,7 @@ do
 		end
 		wipe(recipes)
 		recipes["Nothing"] = empty_recipes
+
 		-- Reset the table, they may have unlearnt a profession - I robbed Ackis!
 		for i in pairs(Professions) do Professions[i] = false end
 
