@@ -420,7 +420,7 @@ do
 		      (strfind(reference, L["Weapon Vellum"]) ~= nil)))) then func = IterEnchant end
 
 		for i = 1, GetNumTradeSkills() do
-			local skill_name, skill_type, num_avail, _ = GetTradeSkillInfo(i)
+			local skill_name, skill_type, num_avail, _, _ = GetTradeSkillInfo(i)
 			if skill_type ~= "header" then
 				name_pair.normal = skill_name
 				name_pair.color = Difficulty[skill_type]..skill_name.."|r"
