@@ -384,6 +384,10 @@ do
 				[60767] = 60,	-- Enchant Bracers - Superior Spellpower
 				[62256] = 60,	-- Enchant Bracers - Major Stamina
 				[62257] = 60,	-- Enchant Weapon - Titanguard
+				[62948] = 60,	-- Enchant Staff - Greater Spellpower
+				[62959] = 60,	-- Enchant Staff - Spellpower
+				[64441] = 60,	-- Enchant Weapon - Blade Ward
+				[64579] = 60,	-- Enchant Weapon - Blood Draining
 			}
 		end
 		local _, _, ench_str = strfind(GetTradeSkillRecipeLink(skill_idx), "^|%x+|H(.+)|h%[.+%]")
