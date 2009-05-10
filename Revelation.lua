@@ -425,7 +425,7 @@ do
 
 		for i = 1, GetNumTradeSkills() do
 			local skill_name, skill_type, num_avail, _, _ = GetTradeSkillInfo(i)
-			if skill_type ~= "header" then
+			if (skill_name ~= nil) and (skill_type ~= "header") then
 				name_pair.normal = skill_name
 				name_pair.color = Difficulty[skill_type]..skill_name.."|r"
 				func(prof, i, reference, name_pair, num_avail, level, single)
