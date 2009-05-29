@@ -6,7 +6,7 @@
 ## X-Date: @project-date-iso@
 ## X-Email: torhal-wow@googlegroups.com
 ## X-Category: Professions
-## OptionalDeps: Ace3, AceLibrary, Dewdrop-2.0
+## OptionalDeps: Ace3, AceLibrary, DewdropLib
 ## SavedVariables: RevelationConfig
 
 ## LoadManagers: AddonLoader
