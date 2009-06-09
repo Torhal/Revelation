@@ -61,7 +61,7 @@ local PROF_ENCHANTING = GetSpellInfo(7411)
 local PROF_INSCRIPTION = GetSpellInfo(45357)
 local PROF_RUNEFORGING = GetSpellInfo(53428)
 
-local Professions = {
+local PROFESSIONS = {
 	[GetSpellInfo(2259)]	= false, -- Alchemy
 	[GetSpellInfo(2018)]	= false, -- Blacksmithing
 	[GetSpellInfo(2550)]	= false, -- Cooking
@@ -130,8 +130,8 @@ do
 		local n_max = tonumber(max)
 		return n_amount >= 1 and n_amount <= n_max
 	end
-
 	local icons = {}
+
 	function AddRecipe(prof, skill_name, skill_idx, num_avail)
 		local has_arrow = false
 		local sub_menu
@@ -166,10 +166,10 @@ do
 			entry2.editBoxValidateArg2 = editBoxText
 			tinsert(sub_menu, entry2)
 		end
-		local craft_link = GetTradeSkillItemLink(skill_idx) or GetTradeSkillRecipeLink(skill_idx)
+		local recipe_link = GetTradeSkillRecipeLink(skill_idx)
 
 		if not icons[normal_name] then
-			icons[normal_name] = select(10, GetItemInfo(craft_link)) or GetTradeSkillIcon(skill_idx)
+			icons[normal_name] = select(10, GetItemInfo(recipe_link)) or GetTradeSkillIcon(skill_idx)
 		end
 		if recipes["Nothing"] then wipe(recipes) end
 
@@ -185,7 +185,7 @@ do
 		new_recipe.iconHeight = 16
 		new_recipe.tooltipFunc = GameTooltip.SetHyperlink
 		new_recipe.tooltipArg1 = GameTooltip
-		new_recipe.tooltipArg2 = craft_link
+		new_recipe.tooltipArg2 = recipe_link
 		new_recipe.subMenu = sub_menu
 		recipes[normal_name] = new_recipe
 	end
@@ -226,14 +226,14 @@ do
 		local found = false
 		local normal_name = skill_name.normal
 
-		if (eqref == nil) and (strfind(reference, L["Armor Vellum"]) ~= nil) then
+		if not eqref and (strfind(reference, L["Armor Vellum"]) ~= nil) then
 			for k, v in pairs(ArmorEnch) do
 				if strfind(normal_name, v) ~= nil then
 					found = true
 					break
 				end
 			end
-		elseif (eqref == nil) and (strfind(reference, L["Weapon Vellum"]) ~= nil) then
+		elseif not eqref and (strfind(reference, L["Weapon Vellum"]) ~= nil) then
 			for k, v in pairs(WeaponEnch) do
 				if strfind(normal_name, v) ~= nil then
 					found = true
@@ -414,7 +414,7 @@ do
 
 	function Scan(prof, reference, level, single)
 		CastSpellByName(prof)
-		if (ATSW_SkipSlowScan ~= nil) then ATSW_SkipSlowScan() end
+		if ATSW_SkipSlowScan then ATSW_SkipSlowScan() end
 
 		func = IterTrade
 
@@ -425,7 +425,7 @@ do
 
 		for i = 1, GetNumTradeSkills() do
 			local skill_name, skill_type, num_avail, _, _ = GetTradeSkillInfo(i)
-			if (skill_name ~= nil) and (skill_type ~= "header") then
+			if skill_name and (skill_type ~= "header") then
 				name_pair.normal = skill_name
 				name_pair.color = Difficulty[skill_type]..skill_name.."|r"
 				func(prof, i, reference, name_pair, num_avail, level, single)
@@ -438,22 +438,32 @@ end
 -------------------------------------------------------------------------------
 -- Main AddOn functions
 -------------------------------------------------------------------------------
-function Revelation:OnInitialize()
-	local LDBinfo = {
-		type = "launcher",
-		icon = "Interface\\Icons\\Spell_Fire_SealOfFire",
-		label = NAME,
-		OnClick = function(button) InterfaceOptionsFrame_OpenToCategory(Revelation.optionsFrames.Revelation) end
-	}
-	self.DataObj = LibStub("LibDataBroker-1.1"):NewDataObject(NAME, LDBinfo)
-	self.db = LibStub("AceDB-3.0"):New(NAME.."Config", defaults)
-	self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
-	self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
-	self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
-	db = self.db.profile
+do
+	local options_frame = InterfaceOptionsFrame
 
-	self:SetupOptions()
-end
+	function Revelation:OnInitialize()
+		local LDBinfo = {
+			type = "launcher",
+			icon = "Interface\\Icons\\Spell_Fire_SealOfFire",
+			label = NAME,
+			OnClick = function(button)
+					  if options_frame:IsVisible() then
+						  options_frame:Hide()
+					  else
+						  InterfaceOptionsFrame_OpenToCategory(Revelation.optionsFrames.Revelation)
+					  end
+				  end
+		}
+		self.DataObj = LibStub("LibDataBroker-1.1"):NewDataObject(NAME, LDBinfo)
+		self.db = LibStub("AceDB-3.0"):New(NAME.."Config", defaults)
+		self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
+		self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
+		self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
+		db = self.db.profile
+
+		self:SetupOptions()
+	end
+end	-- do
 
 function Revelation:OnEnable()
 	self:RawHook("PaperDollItemSlotButton_OnModifiedClick", true)
@@ -475,9 +485,15 @@ do
 		func = function() Dewdrop:Close() end,
 		hasArrow = false
 	}
+
+	local function ShowRecipes()
+		Dewdrop:FeedTable(recipes)
+	end
+
 	function Revelation:Menu(focus, item)
-		if (item == nil) then return end
-		if (focus == nil) then
+		if not item then return end
+
+		if not focus then
 			if not ModifiersPressed() then return end	-- Enforce for HandleModifiedItemClick
 			focus = GetMouseFocus()
 		end
@@ -491,37 +507,37 @@ do
 		recipes["Nothing"] = empty_recipes
 
 		-- Reset the table, they may have unlearnt a profession - I robbed Ackis!
-		for i in pairs(Professions) do Professions[i] = false end
+		for i in pairs(PROFESSIONS) do PROFESSIONS[i] = false end
 
 		-- Grab names from the spell book
 		for index = 1, 25, 1 do
 			local spell_name = GetSpellName(index, BOOKTYPE_SPELL)
-			if (not spell_name) or (index == 25) then break end
-			if (Professions[spell_name] == false) then Professions[spell_name] = true end
+			if not spell_name or (index == 25) then break end
+			if PROFESSIONS[spell_name] == false then PROFESSIONS[spell_name] = true end
 		end
 
 		local item_name, _, _, item_level, _, item_type, item_stype, _, item_eqloc, _ = GetItemInfo(item)
 
 		if (item_type == L["Armor"]) or (strfind(item_type, L["Weapon"]) ~= nil) then
-			if (Professions[PROF_ENCHANTING] == true) then
+			if (PROFESSIONS[PROF_ENCHANTING] == true) then
 				Scan(PROF_ENCHANTING, item_eqloc, item_level, true)
 			end
-			if (Professions[PROF_INSCRIPTION] == true) then
+			if (PROFESSIONS[PROF_INSCRIPTION] == true) then
 				Scan(PROF_INSCRIPTION, item_eqloc, item_level, true)
 			end
-			if (Professions[PROF_RUNEFORGING] == true) then
+			if (PROFESSIONS[PROF_RUNEFORGING] == true) then
 				Scan(PROF_RUNEFORGING, item_eqloc, item_level, true)
 			end
 		elseif item_type == L["Trade Goods"] and ((item_stype == L["Armor Enchantment"]) or (item_stype == L["Weapon Enchantment"])) then
-			if (Professions[PROF_ENCHANTING] == true) then
+			if (PROFESSIONS[PROF_ENCHANTING] == true) then
 				Scan(PROF_ENCHANTING, item_name, max(1, item_level - 5), true)	-- Vellum item levels are 5 higher than the enchant which can be put on them.
 			end
 		else
-			for key, val in pairs(Professions) do
+			for key, val in pairs(PROFESSIONS) do
 				if val == true then Scan(key, item_name, 1, false) end
 			end
 		end
-		Dewdrop:Open(focus, "children", function() Dewdrop:FeedTable(recipes) end)
+		Dewdrop:Open(focus, "children", ShowRecipes)
 	end
 end
 
