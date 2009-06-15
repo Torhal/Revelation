@@ -215,7 +215,7 @@ do
 	}
 
 	local WeaponEnch = {
-		L["2H Weapon"], L["Weapon"]
+		L["Staff"], L["2H Weapon"], L["Weapon"]
 	}
 
 	local EnchantLevel
@@ -450,7 +450,7 @@ do
 					  if options_frame:IsVisible() then
 						  options_frame:Hide()
 					  else
-						  InterfaceOptionsFrame_OpenToCategory(Revelation.optionsFrames.Revelation)
+						  InterfaceOptionsFrame_OpenToCategory(Revelation.optionsFrame)
 					  end
 				  end
 		}
@@ -641,9 +641,7 @@ do
 end
 
 function Revelation:SetupOptions()
-	self.optionsFrames = {}
-
 	LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(NAME, GetOptions())
-	LibStub("AceConfig-3.0"):RegisterOptionsTable(NAME, GetOptions(), "nanotalk")
-	self.optionsFrames.Revelation = LibStub("AceConfigDialog-3.0"):AddToBlizOptions(NAME)
+	LibStub("AceConfig-3.0"):RegisterOptionsTable(NAME, GetOptions(), "revelation")
+	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions(NAME)
 end
