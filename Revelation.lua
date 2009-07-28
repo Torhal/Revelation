@@ -193,17 +193,17 @@ end
 
 local IterTrade
 do
-	local function IsReagent(item, recipe)
+	local function IsReagent(item_name, recipe)
 		local num = GetTradeSkillNumReagents(recipe)
 
 		for reagent = 1, num do
-			if item == GetTradeSkillReagentInfo(recipe, reagent) then return true end
+			if item_name == GetTradeSkillReagentInfo(recipe, reagent) then return true end
 		end
 		return false
 	end
 
-	function IterTrade(prof, skill_idx, reference, skill_name, num_avail, level, single)
-		if (num_avail < 1) or (not IsReagent(reference, skill_idx)) then return end
+	function IterTrade(prof, skill_idx, item, skill_name, num_avail, level, single)
+		if (num_avail < 1) or (not IsReagent(item.name, skill_idx)) then return end
 		AddRecipe(prof, skill_name, skill_idx, single and 1 or num_avail)
 	end
 end
@@ -219,36 +219,38 @@ do
 	}
 
 	local EnchantLevel
-	function IterEnchant(prof, skill_idx, reference, skill_name, num_avail, level, single)
+	function IterEnchant(prof, skill_idx, item, skill_name, num_avail, level, single)
 		if (num_avail < 1) then return end
 
-		local eqref = EquipSlot[reference]
+		local eqref = item.eqloc and EquipSlot[item.eqloc] or nil
 		local found = false
 		local normal_name = skill_name.normal
 
-		if not eqref and (strfind(reference, L["Armor Vellum"]) ~= nil) then
-			for k, v in pairs(ArmorEnch) do
-				if strfind(normal_name, v) ~= nil then
-					found = true
-					break
+		if not eqref then
+			if strfind(item.name, L["Armor Vellum"]) then
+				for k, v in pairs(ArmorEnch) do
+					if strfind(normal_name, v) then
+						found = true
+						break
+					end
+				end
+			elseif strfind(item.name, L["Weapon Vellum"]) then
+				for k, v in pairs(WeaponEnch) do
+					if strfind(normal_name, v) then
+						found = true
+						break
+					end
 				end
 			end
-		elseif not eqref and (strfind(reference, L["Weapon Vellum"]) ~= nil) then
-			for k, v in pairs(WeaponEnch) do
-				if strfind(normal_name, v) ~= nil then
-					found = true
-					break
-				end
-			end
-		elseif (reference == "INVTYPE_WEAPON") or (reference == "INVTYPE_WEAPONMAINHAND") or (reference == "INVTYPE_WEAPONOFFHAND") then
-			if (strfind(normal_name, EquipSlot["INVTYPE_2HWEAPON"]) == nil) and (strfind(normal_name, eqref) ~= nil) then
+		elseif (item.eqloc == "INVTYPE_WEAPON") or (item.eqloc == "INVTYPE_WEAPONMAINHAND") or (item.eqloc == "INVTYPE_WEAPONOFFHAND") then
+			if (not strfind(normal_name, EquipSlot["INVTYPE_2HWEAPON"])) and strfind(normal_name, eqref) then
 				found = true
 			end
-		elseif (reference == "INVTYPE_2HWEAPON") then
-			if (strfind(normal_name, eqref) ~= nil) or (strfind(normal_name, EquipSlot["INVTYPE_WEAPON"]) ~= nil) then
+		elseif (item.eqloc == "INVTYPE_2HWEAPON") then
+			if strfind(normal_name, eqref) or strfind(normal_name, EquipSlot["INVTYPE_WEAPON"]) or (item.stype == L["Staff"] and strfind(normal_name, L["Staff"])) then
 				found = true
 			end
-		elseif strfind(normal_name, eqref) ~= nil then
+		elseif strfind(normal_name, eqref) then
 			found = true
 		end
 
@@ -412,23 +414,26 @@ do
 	local func
 	local ATSW_SkipSlowScan = _G.ATSW_SkipSlowScan
 
-	function Scan(prof, reference, level, single)
+	function Scan(prof, item, level, single)
 		CastSpellByName(prof)
 		if ATSW_SkipSlowScan then ATSW_SkipSlowScan() end
 
 		func = IterTrade
 
-		if ((prof == PROF_ENCHANTING) and
-		    (EquipSlot[reference] or
-		     ((strfind(reference, L["Armor Vellum"]) ~= nil) or
-		      (strfind(reference, L["Weapon Vellum"]) ~= nil)))) then func = IterEnchant end
+		if prof == PROF_ENCHANTING then
+			if (EquipSlot[item.eqloc]
+			    or (strfind(item.name, L["Armor Vellum"])
+				or strfind(item.name, L["Weapon Vellum"]))) then
+				func = IterEnchant
+			end
+		end
 
 		for i = 1, GetNumTradeSkills() do
 			local skill_name, skill_type, num_avail, _, _ = GetTradeSkillInfo(i)
 			if skill_name and (skill_type ~= "header") then
 				name_pair.normal = skill_name
 				name_pair.color = Difficulty[skill_type]..skill_name.."|r"
-				func(prof, i, reference, name_pair, num_avail, level, single)
+				func(prof, i, item, name_pair, num_avail, level, single)
 			end
 		end
 		CloseTradeSkill()
@@ -485,17 +490,18 @@ do
 		func = function() Dewdrop:Close() end,
 		hasArrow = false
 	}
+	local scan_item = {}
 
 	local function ShowRecipes()
 		Dewdrop:FeedTable(recipes)
 	end
 
-	function Revelation:Menu(focus, item)
-		if not item then return end
+	function Revelation:Menu(anchor, item_link)
+		if not item_link then return end
 
-		if not focus then
+		if not anchor then
 			if not ModifiersPressed() then return end	-- Enforce for HandleModifiedItemClick
-			focus = GetMouseFocus()
+			anchor = GetMouseFocus()
 		end
 		-- Release the tables for re-use.
 		for i = 1, #active_tables do
@@ -516,28 +522,34 @@ do
 			if PROFESSIONS[spell_name] == false then PROFESSIONS[spell_name] = true end
 		end
 
-		local item_name, _, _, item_level, _, item_type, item_stype, _, item_eqloc, _ = GetItemInfo(item)
+		local item_name, _, _, item_level, _, item_type, item_stype, _, item_eqloc, _ = GetItemInfo(item_link)
+
+		scan_item.name = item_name
+		scan_item.level = item_level
+		scan_item.type = item_type
+		scan_item.stype = item_stype
+		scan_item.eqloc = item_eqloc
 
 		if (item_type == L["Armor"]) or (strfind(item_type, L["Weapon"]) ~= nil) then
 			if (PROFESSIONS[PROF_ENCHANTING] == true) then
-				Scan(PROF_ENCHANTING, item_eqloc, item_level, true)
+				Scan(PROF_ENCHANTING, scan_item, item_level, true)
 			end
 			if (PROFESSIONS[PROF_INSCRIPTION] == true) then
-				Scan(PROF_INSCRIPTION, item_eqloc, item_level, true)
+				Scan(PROF_INSCRIPTION, scan_item, item_level, true)
 			end
 			if (PROFESSIONS[PROF_RUNEFORGING] == true) then
-				Scan(PROF_RUNEFORGING, item_eqloc, item_level, true)
+				Scan(PROF_RUNEFORGING, scan_item, item_level, true)
 			end
 		elseif item_type == L["Trade Goods"] and ((item_stype == L["Armor Enchantment"]) or (item_stype == L["Weapon Enchantment"])) then
 			if (PROFESSIONS[PROF_ENCHANTING] == true) then
-				Scan(PROF_ENCHANTING, item_name, max(1, item_level - 5), true)	-- Vellum item levels are 5 higher than the enchant which can be put on them.
+				Scan(PROF_ENCHANTING, scan_item, max(1, item_level - 5), true)	-- Vellum item levels are 5 higher than the enchant which can be put on them.
 			end
 		else
 			for key, val in pairs(PROFESSIONS) do
-				if val == true then Scan(key, item_name, 1, false) end
+				if val == true then Scan(key, scan_item, 1, false) end
 			end
 		end
-		Dewdrop:Open(focus, "children", ShowRecipes)
+		Dewdrop:Open(anchor, "children", ShowRecipes)
 	end
 end
 
