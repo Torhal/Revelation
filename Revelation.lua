@@ -2,13 +2,23 @@
 -- Localized globals
 -------------------------------------------------------------------------------
 local _G = getfenv(0)
-local max = _G.max
+
+local string = _G.string
+local table = _G.table
+
+local strfind, strsub, strsplit = string.find, string.sub, string.split
+
 local pairs, ipairs = _G.pairs, _G.ipairs
-local strfind, strsub, strsplit = _G.string.find, _G.string.sub, _G.string.split
-local tonumber = _G.tonumber
-local tinsert, tremove = _G.table.insert, _G.table.remove
+local tinsert, tremove = table.insert, table.remove
 local wipe = _G.wipe
+
+local max = _G.max
+local tonumber = _G.tonumber
 local select = _G.select
+
+-------------------------------------------------------------------------------
+-- Localized Blizzard API
+-------------------------------------------------------------------------------
 local CastSpellByName = _G.CastSpellByName
 local CloseTradeSkill, DoTradeSkill = _G.CloseTradeSkill, _G.DoTradeSkill
 local GameTooltip, GetSpellInfo = _G.GameTooltip, _G.GetSpellInfo
@@ -98,9 +108,9 @@ local db
 local ModifiersPressed
 do
 	local ModifierKey = {
-		[1] = IsAltKeyDown,	-- ALT
-		[2] = IsControlKeyDown,	-- CTRL
-		[3] = IsShiftKeyDown,	-- SHIFT
+		[1] = IsAltKeyDown,
+		[2] = IsControlKeyDown,
+		[3] = IsShiftKeyDown,
 	}
 	function ModifiersPressed()
 		local mod, mod2 = db.modifier, db.modifier2
@@ -121,6 +131,9 @@ do
 	local function CraftItem(prof, skill_idx, amount)
 		CastSpellByName(prof)
 		CloseTradeSkill()
+
+--		local skill_name, skill_type, num_avail, _, _ = GetTradeSkillInfo(skill_idx)
+--		print(string.format("CraftItem(): Profession %s, skill '%s', amount %d", prof, skill_name, amount))
 		DoTradeSkill(skill_idx, amount)
 		Dewdrop:Close()
 	end
@@ -197,13 +210,17 @@ do
 		local num = GetTradeSkillNumReagents(recipe)
 
 		for reagent = 1, num do
-			if item_name == GetTradeSkillReagentInfo(recipe, reagent) then return true end
+			if item_name == GetTradeSkillReagentInfo(recipe, reagent) then
+				return true
+			end
 		end
 		return false
 	end
 
 	function IterTrade(prof, skill_idx, item, skill_name, num_avail, level, single)
-		if (num_avail < 1) or (not IsReagent(item.name, skill_idx)) then return end
+		if num_avail < 1 or not IsReagent(item.name, skill_idx) then
+			return
+		end
 		AddRecipe(prof, skill_name, skill_idx, single and 1 or num_avail)
 	end
 end
@@ -220,7 +237,9 @@ do
 
 	local EnchantLevel
 	function IterEnchant(prof, skill_idx, item, skill_name, num_avail, level, single)
-		if (num_avail < 1) then return end
+		if num_avail < 1 then
+			return
+		end
 
 		local eqref = item.eqloc and EquipSlot[item.eqloc] or nil
 		local found = false
@@ -242,11 +261,11 @@ do
 					end
 				end
 			end
-		elseif (item.eqloc == "INVTYPE_WEAPON") or (item.eqloc == "INVTYPE_WEAPONMAINHAND") or (item.eqloc == "INVTYPE_WEAPONOFFHAND") then
+		elseif item.eqloc == "INVTYPE_WEAPON" or item.eqloc == "INVTYPE_WEAPONMAINHAND" or item.eqloc == "INVTYPE_WEAPONOFFHAND" then
 			if (not strfind(normal_name, EquipSlot["INVTYPE_2HWEAPON"])) and strfind(normal_name, eqref) then
 				found = true
 			end
-		elseif (item.eqloc == "INVTYPE_2HWEAPON") then
+		elseif item.eqloc == "INVTYPE_2HWEAPON" then
 			if strfind(normal_name, eqref) or strfind(normal_name, EquipSlot["INVTYPE_WEAPON"]) or (item.stype == L["Staff"] and strfind(normal_name, L["Staff"])) then
 				found = true
 			end
@@ -254,7 +273,9 @@ do
 			found = true
 		end
 
-		if not found then return end
+		if not found then
+			return
+		end
 
 		if not EnchantLevel then
 			EnchantLevel = {
@@ -396,7 +417,9 @@ do
 		local _, ench_num = strsplit(":", ench_str)
 		local ench_level = EnchantLevel[tonumber(ench_num)]
 
-		if ench_level and ench_level > level then return end
+		if ench_level and ench_level > level then
+			return
+		end
 		--	print(ench_str.." - "..normal_name)
 		AddRecipe(prof, skill_name, skill_idx, 1)
 	end
@@ -404,7 +427,7 @@ end
 
 local Scan
 do
-	local Difficulty = {
+	local DIFFICULTY = {
 		["trivial"]	= "|cff808080",
 		["easy"]	= "|cff40bf40",
 		["medium"]	= "|cffffff00",
@@ -416,8 +439,10 @@ do
 
 	function Scan(prof, item, level, single)
 		CastSpellByName(prof)
-		if ATSW_SkipSlowScan then ATSW_SkipSlowScan() end
 
+		if ATSW_SkipSlowScan then
+			ATSW_SkipSlowScan()
+		end
 		func = IterTrade
 
 		if prof == PROF_ENCHANTING then
@@ -428,12 +453,22 @@ do
 			end
 		end
 
-		for i = 1, GetNumTradeSkills() do
-			local skill_name, skill_type, num_avail, _, _ = GetTradeSkillInfo(i)
-			if skill_name and (skill_type ~= "header") then
+		-- Expand all headers for an accurate reading.
+		for i = GetNumTradeSkills(), 1, -1 do
+			local _, skill_type = GetTradeSkillInfo(i)
+
+			if skill_type == "header" then
+				ExpandTradeSkillSubClass(i)
+			end
+		end
+
+		for idx = 1, GetNumTradeSkills() do
+			local skill_name, skill_type, num_avail, _, _ = GetTradeSkillInfo(idx)
+
+			if skill_name and skill_type ~= "header" then
 				name_pair.normal = skill_name
-				name_pair.color = Difficulty[skill_type]..skill_name.."|r"
-				func(prof, i, item, name_pair, num_avail, level, single)
+				name_pair.color = DIFFICULTY[skill_type]..skill_name.."|r"
+				func(prof, idx, item, name_pair, num_avail, level, single)
 			end
 		end
 		CloseTradeSkill()
@@ -485,41 +520,52 @@ function Revelation:OnProfileChanged(event, database, newProfileKey)
 end
 
 do
-	local empty_recipes = {
+	local EMPTY_RECIPE = {
 		text = L["Either no recipe or no reagents were found."],
 		func = function() Dewdrop:Close() end,
 		hasArrow = false
 	}
-	local scan_item = {}
-
 	local function ShowRecipes()
 		Dewdrop:FeedTable(recipes)
 	end
+	local scan_item = {}
 
 	function Revelation:Menu(anchor, item_link)
-		if not item_link then return end
+		if not item_link then
+			return
+		end
 
 		if not anchor then
-			if not ModifiersPressed() then return end	-- Enforce for HandleModifiedItemClick
+			if not ModifiersPressed() then	-- Enforce for HandleModifiedItemClick
+				return
+			end
 			anchor = GetMouseFocus()
 		end
-		-- Release the tables for re-use.
-		for i = 1, #active_tables do
+
+		for i = 1, #active_tables do	-- Release the tables for re-use.
 			wipe(active_tables[i])
 			tinsert(table_heap, active_tables[i])
 			active_tables[i] = nil
 		end
 		wipe(recipes)
-		recipes["Nothing"] = empty_recipes
+		recipes["Nothing"] = EMPTY_RECIPE
 
 		-- Reset the table, they may have unlearnt a profession - I robbed Ackis!
-		for i in pairs(PROFESSIONS) do PROFESSIONS[i] = false end
+		for i in pairs(PROFESSIONS) do
+			PROFESSIONS[i] = false
+		end
 
 		-- Grab names from the spell book
 		for index = 1, 25, 1 do
 			local spell_name = GetSpellName(index, BOOKTYPE_SPELL)
-			if not spell_name or (index == 25) then break end
-			if PROFESSIONS[spell_name] == false then PROFESSIONS[spell_name] = true end
+
+			if not spell_name or (index == 25) then
+				break
+			end
+
+			if PROFESSIONS[spell_name] == false then
+				PROFESSIONS[spell_name] = true
+			end
 		end
 
 		local item_name, _, _, item_level, _, item_type, item_stype, _, item_eqloc, _ = GetItemInfo(item_link)
@@ -530,23 +576,27 @@ do
 		scan_item.stype = item_stype
 		scan_item.eqloc = item_eqloc
 
-		if (item_type == L["Armor"]) or (strfind(item_type, L["Weapon"]) ~= nil) then
-			if (PROFESSIONS[PROF_ENCHANTING] == true) then
+		if item_type == L["Armor"] or strfind(item_type, L["Weapon"]) then
+			if PROFESSIONS[PROF_ENCHANTING] == true then
 				Scan(PROF_ENCHANTING, scan_item, item_level, true)
 			end
-			if (PROFESSIONS[PROF_INSCRIPTION] == true) then
+
+			if PROFESSIONS[PROF_INSCRIPTION] == true then
 				Scan(PROF_INSCRIPTION, scan_item, item_level, true)
 			end
-			if (PROFESSIONS[PROF_RUNEFORGING] == true) then
+
+			if PROFESSIONS[PROF_RUNEFORGING] == true then
 				Scan(PROF_RUNEFORGING, scan_item, item_level, true)
 			end
-		elseif item_type == L["Trade Goods"] and ((item_stype == L["Armor Enchantment"]) or (item_stype == L["Weapon Enchantment"])) then
-			if (PROFESSIONS[PROF_ENCHANTING] == true) then
+		elseif item_type == L["Trade Goods"] and (item_stype == L["Armor Enchantment"] or item_stype == L["Weapon Enchantment"]) then
+			if PROFESSIONS[PROF_ENCHANTING] == true then
 				Scan(PROF_ENCHANTING, scan_item, max(1, item_level - 5), true)	-- Vellum item levels are 5 higher than the enchant which can be put on them.
 			end
 		else
-			for key, val in pairs(PROFESSIONS) do
-				if val == true then Scan(key, scan_item, 1, false) end
+			for prof, known in pairs(PROFESSIONS) do
+				if known == true then
+					Scan(prof, scan_item, 1, false)
+				end
 			end
 		end
 		Dewdrop:Open(anchor, "children", ShowRecipes)
@@ -561,34 +611,37 @@ do
 		[1] = "LeftButton",
 		[2] = "RightButton"
 	}
-	local isHandled = false		-- For HandleModifiedItemClick kludge...
+	local click_handled = false		-- For HandleModifiedItemClick kludge...
 
 	function Revelation:PaperDollItemSlotButton_OnModifiedClick(...)
 		local hookSelf, button = ...
-		isHandled = true
-		if (ModifiersPressed() and (button == MouseButton[db.button])) then
+
+		click_handled = true
+
+		if ModifiersPressed() and button == MouseButton[db.button] then
 			self:Menu(hookSelf, GetInventoryItemLink("player", hookSelf:GetID()))
 		else
 			self.hooks.PaperDollItemSlotButton_OnModifiedClick(...)
 		end
-		isHandled = false
+		click_handled = false
 	end
 
 	function Revelation:ContainerFrameItemButton_OnModifiedClick(...)
 		local hookSelf, button = ...
-		isHandled = true
 
-		if (ModifiersPressed() and (button == MouseButton[db.button])) then
+		click_handled = true
+
+		if ModifiersPressed() and button == MouseButton[db.button] then
 			self:Menu(hookSelf, GetContainerItemLink(hookSelf:GetParent():GetID(), hookSelf:GetID()))
 		end
 		self.hooks.ContainerFrameItemButton_OnModifiedClick(...)
-		isHandled = false
+		click_handled = false
 	end
 
 	-- This hook is required as it is the only way to reference TradeRecipientItem7ItemButton
 	-- A.K.A.: "Will not be traded"
 	function Revelation:HandleModifiedItemClick(...)
-		if isHandled == false then
+		if not click_handled then
 			self:Menu(nil, ...)
 		end
 		return self.hooks.HandleModifiedItemClick(...)
