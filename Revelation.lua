@@ -111,11 +111,17 @@ do
 		[1] = IsAltKeyDown,
 		[2] = IsControlKeyDown,
 		[3] = IsShiftKeyDown,
+		[4] = IsRightAltKeyDown,
+		[5] = IsLeftAltKeyDown,
+		[6] = IsRightControlKeyDown,
+		[7] = IsLeftControlKeyDown,
+		[8] = IsRightShiftKeyDown,
+		[9] = IsLeftShiftKeyDown,
 	}
 	function ModifiersPressed()
 		local mod, mod2 = db.modifier, db.modifier2
-		local retval = (mod == 4) or ModifierKey[mod]()
-		local retval2 = (mod2 == 4) or ModifierKey[mod2]()
+		local retval = (mod == 10) or ModifierKey[mod]()
+		local retval2 = (mod2 == 10) or ModifierKey[mod2]()
 		return retval and retval2
 	end
 end
@@ -155,7 +161,7 @@ do
 			sub_menu = AcquireTable()
 
 			local entry = AcquireTable()
-			entry.text = L["All"]
+			entry.text = _G.ALL
 			entry.func = CraftItem
 			entry.arg1 = prof
 			entry.arg2 = skill_idx
@@ -609,7 +615,7 @@ end
 do
 	local MouseButton = {
 		[1] = "LeftButton",
-		[2] = "RightButton"
+		[2] = "RightButton",
 	}
 	local click_handled = false		-- For HandleModifiedItemClick kludge...
 
@@ -655,15 +661,21 @@ _G["TradeRecipientItem7ItemButton"]:RegisterForClicks("AnyUp")
 local options, GetOptions
 do
 	local ModifierName = {
-		[1] = L["ALT"],
-		[2] = L["CTRL"],
-		[3] = L["SHIFT"],
-		[4] = L["NONE"]
+		[1]	= _G.ALT_KEY,
+		[2]	= _G.CTRL_KEY,
+		[3]	= _G.SHIFT_KEY,
+		[4]	= _G.RALT_KEY_TEXT,
+		[5]	= _G.LALT_KEY_TEXT,
+		[6]	= _G.RCTRL_KEY_TEXT,
+		[7]	= _G.LCTRL_KEY_TEXT,
+		[8]	= _G.RSHIFT_KEY_TEXT,
+		[9]	= _G.LSHIFT_KEY_TEXT,
+		[10]	= _G.NONE_KEY
 	}
 
 	local ButtonName = {
-		[1] = L["Left Button"],
-		[2] = L["Right Button"]
+		[1] = _G.KEY_BUTTON1,	-- Left Mouse Button
+		[2] = _G.KEY_BUTTON2	-- Right Mouse Button
 	}
 	function GetOptions()
 		if not options then
@@ -674,7 +686,7 @@ do
 					modifier = {
 						order = 1,
 						type = "select",
-						name = L["Modifier Key"],
+						name = _G.KEY1,
 						desc = L["Select the key to press when mouse-clicking for menu display."],
 						get = function() return db.modifier end,
 						set = function(info, value) db.modifier = value end,
@@ -683,7 +695,7 @@ do
 					modifier2 = {
 						order = 2,
 						type = "select",
-						name = L["Second Modifier Key"],
+						name = _G.KEY2,
 						desc = L["Select the second key to press when mouse-clicking for menu display."],
 						get = function() return db.modifier2 end,
 						set = function(info, value) db.modifier2 = value end,
@@ -692,7 +704,7 @@ do
 					button = {
 						order = 3,
 						type = "select",
-						name = L["Mouse Button"],
+						name = _G.MOUSE_LABEL,
 						desc = L["Select the mouse button to click for menu display."],
 						get = function() return db.button end,
 						set = function(info, value) db.button = value end,
