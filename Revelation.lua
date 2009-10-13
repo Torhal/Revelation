@@ -42,13 +42,14 @@ local LibStub = _G.LibStub
 -------------------------------------------------------------------------------
 local NAME = "Revelation"
 local Revelation = LibStub("AceAddon-3.0"):NewAddon(NAME, "AceHook-3.0")
-local Dewdrop = AceLibrary("Dewdrop-2.0")
 
 local dev = false
 --@debug@
 dev = true
 --@end-debug@
 local L = LibStub("AceLocale-3.0"):GetLocale(NAME, "enUS", true, dev)
+
+local DropDown
 
 -------------------------------------------------------------------------------
 -- Constants
@@ -71,7 +72,7 @@ local PROF_ENCHANTING = GetSpellInfo(7411)
 local PROF_INSCRIPTION = GetSpellInfo(45357)
 local PROF_RUNEFORGING = GetSpellInfo(53428)
 
-local PROFESSIONS = {
+local known_professions = {
 	[GetSpellInfo(2259)]	= false, -- Alchemy
 	[GetSpellInfo(2018)]	= false, -- Blacksmithing
 	[GetSpellInfo(2550)]	= false, -- Cooking
@@ -105,6 +106,10 @@ local db
 -------------------------------------------------------------------------------
 -- Local functions
 -------------------------------------------------------------------------------
+local function printf(text, ...)
+	return print(string.format(text, ...))
+end
+
 local ModifiersPressed
 do
 	local ModifierKey = {
@@ -126,6 +131,7 @@ do
 	end
 end
 
+local OnCraftItems
 local AddRecipe
 do
 	local function AcquireTable()
@@ -134,77 +140,87 @@ do
 		return tbl
 	end
 
-	local function CraftItem(prof, skill_idx, amount)
+	local function CraftItem(self, data)
+		local prof, skill_idx, amount = string.split(":", data)
+
 		CastSpellByName(prof)
 		CloseTradeSkill()
-
---		local skill_name, skill_type, num_avail, _, _ = GetTradeSkillInfo(skill_idx)
---		print(string.format("CraftItem(): Profession %s, skill '%s', amount %d", prof, skill_name, amount))
 		DoTradeSkill(skill_idx, amount)
-		Dewdrop:Close()
+		CloseDropDownMenus()
+	end
+	local craft_data
+
+	function OnCraftItems(self)
+		local parent = self:GetParent()
+		local amount = tonumber(_G[parent:GetName().."EditBox"]:GetText())
+
+		_G[parent:GetName().."EditBox"]:SetText("")
+
+		if amount == "nil" then
+			amount = nil
+		end
+		local prof, skill_idx, max = string.split(":", craft_data)
+
+		if not amount or amount < 1 or amount > tonumber(max) then
+			return
+		end
+		CraftItem(self, string.format("%s:%d:%d", prof, skill_idx, amount))
+		parent:Hide()
 	end
 
-	local function IsValidRange(max, amount)
-		local n_amount = tonumber(amount)
-		local n_max = tonumber(max)
-		return n_amount >= 1 and n_amount <= n_max
+	local function CraftItem_Popup(self, data)
+		local _, _, max = string.split(":", data)
+
+		craft_data = data
+		StaticPopupDialogs["Revelation_CraftItems"].text = "1 - "..max
+		StaticPopup_Show("Revelation_CraftItems")
+		CloseDropDownMenus()
 	end
-	local icons = {}
+	local icon_cache = {}
 
 	function AddRecipe(prof, skill_name, skill_idx, num_avail)
 		local has_arrow = false
 		local sub_menu
 		local normal_name = skill_name.normal
 
-		if (prof ~= PROF_ENCHANTING) and (num_avail > 1) then
+		if prof ~= PROF_ENCHANTING and num_avail > 1 then
 			has_arrow = true
 			sub_menu = AcquireTable()
 
+			local craft_args = string.format("%s:%d:%d", prof, skill_idx, num_avail)
 			local entry = AcquireTable()
 			entry.text = _G.ALL
 			entry.func = CraftItem
-			entry.arg1 = prof
-			entry.arg2 = skill_idx
-			entry.arg3 = num_avail
-
+			entry.arg1 = craft_args
+			entry.tooltipTitle = "RevelationTooltip"
 			entry.tooltipText = L["Create every"].." "..normal_name.." "..L["you have reagents for."]
+			entry.notCheckable = true
 			tinsert(sub_menu, entry)
 
 			local entry2 = AcquireTable()
 			entry2.text = " 1 - "..num_avail
-			entry2.func = nil
+			entry2.func = CraftItem_Popup
+			entry2.arg1 = craft_args
+			entry2.tooltipTitle = "RevelationTooltip"
 			entry2.tooltipText = L["Create"].." 1 - "..num_avail.." "..normal_name.."."
-			entry2.hasArrow = true
-			entry2.hasEditBox = true
-			entry2.editBoxFunc = CraftItem
-			entry2.editBoxArg1 = prof
-			entry2.editBoxArg2 = skill_idx
-			entry2.editBoxArg3 = editBoxText
-			entry2.editBoxValidateFunc = IsValidRange
-			entry2.editBoxValidateArg1 = num_avail
-			entry2.editBoxValidateArg2 = editBoxText
+			entry2.notCheckable = true
 			tinsert(sub_menu, entry2)
 		end
 		local recipe_link = GetTradeSkillRecipeLink(skill_idx)
 
-		if not icons[normal_name] then
-			icons[normal_name] = select(10, GetItemInfo(recipe_link)) or GetTradeSkillIcon(skill_idx)
+		if not icon_cache[normal_name] then
+			icon_cache[normal_name] = select(10, GetItemInfo(recipe_link)) or GetTradeSkillIcon(skill_idx)
 		end
 		if recipes["Nothing"] then wipe(recipes) end
 
 		local new_recipe = AcquireTable()
-		new_recipe.text = skill_name.color
+		new_recipe.text = "|T"..icon_cache[normal_name]..":24:24|t".."  "..skill_name.color
 		new_recipe.func = CraftItem
-		new_recipe.arg1 = prof
-		new_recipe.arg2 = skill_idx
-		new_recipe.arg3 = 1
+		new_recipe.arg1 = string.format("%s:%d:1", prof, skill_idx)
 		new_recipe.hasArrow = has_arrow
-		new_recipe.icon = icons[normal_name]
-		new_recipe.iconWidth = 16
-		new_recipe.iconHeight = 16
-		new_recipe.tooltipFunc = GameTooltip.SetHyperlink
-		new_recipe.tooltipArg1 = GameTooltip
-		new_recipe.tooltipArg2 = recipe_link
+		new_recipe.tooltipTitle = "RevelationItemLink"
+		new_recipe.tooltipText = recipe_link
+		new_recipe.notCheckable = true
 		new_recipe.subMenu = sub_menu
 		recipes[normal_name] = new_recipe
 	end
@@ -479,7 +495,7 @@ do
 		end
 		CloseTradeSkill()
 	end
-end
+end	-- do
 
 -------------------------------------------------------------------------------
 -- Main AddOn functions
@@ -512,6 +528,60 @@ do
 end	-- do
 
 function Revelation:OnEnable()
+	-------------------------------------------------------------------------------
+	-- Create the dropdown frame, and set its state.
+	-------------------------------------------------------------------------------
+	DropDown = CreateFrame("Frame", "Revelation_DropDown")
+	DropDown.displayMode = "MENU"
+	DropDown.point = "TOPLEFT"
+	DropDown.relativePoint = "TOPRIGHT"
+	DropDown.levelAdjust = 0
+	DropDown.initialize =
+		function(self, level)
+			if not level then
+				return
+			end
+			local info
+
+			if level == 1 then
+				for k, v in pairs(recipes) do
+					info = v
+					info.value = k
+					UIDropDownMenu_AddButton(info, level)
+				end
+			elseif level == 2 then
+				local sub_menu = recipes[UIDROPDOWNMENU_MENU_VALUE].subMenu
+
+				if sub_menu then
+					for key, val in ipairs(sub_menu) do
+						info = val
+						UIDropDownMenu_AddButton(info, level)
+					end
+				end
+			end
+		end
+
+	-----------------------------------------------------------------------
+	-- Static popup initialization
+	-----------------------------------------------------------------------
+	StaticPopupDialogs["Revelation_CraftItems"] = {
+		button1 = OKAY,
+		button2 = CANCEL,
+		OnAccept = OnCraftItems,
+		EditBoxOnEnterPressed = OnCraftItems,
+		EditBoxOnEscapePressed = function(self)
+						 self:GetParent():Hide()
+					 end,
+		timeout = 0,
+		hideOnEscape = 1,
+		exclusive = 1,
+		whileDead = 1,
+		hasEditBox = 1
+	}
+
+	-------------------------------------------------------------------------------
+	-- Create our hooks.
+	-------------------------------------------------------------------------------
 	self:RawHook("PaperDollItemSlotButton_OnModifiedClick", true)
 	self:RawHook("ContainerFrameItemButton_OnModifiedClick", true)
 	self:RawHook("HandleModifiedItemClick", true)
@@ -528,12 +598,9 @@ end
 do
 	local EMPTY_RECIPE = {
 		text = L["Either no recipe or no reagents were found."],
-		func = function() Dewdrop:Close() end,
+		func = function() CloseDropDownMenus() end,
 		hasArrow = false
 	}
-	local function ShowRecipes()
-		Dewdrop:FeedTable(recipes)
-	end
 	local scan_item = {}
 
 	function Revelation:Menu(anchor, item_link)
@@ -557,8 +624,8 @@ do
 		recipes["Nothing"] = EMPTY_RECIPE
 
 		-- Reset the table, they may have unlearnt a profession - I robbed Ackis!
-		for i in pairs(PROFESSIONS) do
-			PROFESSIONS[i] = false
+		for i in pairs(known_professions) do
+			known_professions[i] = false
 		end
 
 		-- Grab names from the spell book
@@ -569,8 +636,8 @@ do
 				break
 			end
 
-			if PROFESSIONS[spell_name] == false then
-				PROFESSIONS[spell_name] = true
+			if known_professions[spell_name] == false then
+				known_professions[spell_name] = true
 			end
 		end
 
@@ -583,29 +650,29 @@ do
 		scan_item.eqloc = item_eqloc
 
 		if item_type == L["Armor"] or strfind(item_type, L["Weapon"]) then
-			if PROFESSIONS[PROF_ENCHANTING] == true then
+			if known_professions[PROF_ENCHANTING] == true then
 				Scan(PROF_ENCHANTING, scan_item, item_level, true)
 			end
 
-			if PROFESSIONS[PROF_INSCRIPTION] == true then
+			if known_professions[PROF_INSCRIPTION] == true then
 				Scan(PROF_INSCRIPTION, scan_item, item_level, true)
 			end
 
-			if PROFESSIONS[PROF_RUNEFORGING] == true then
+			if known_professions[PROF_RUNEFORGING] == true then
 				Scan(PROF_RUNEFORGING, scan_item, item_level, true)
 			end
 		elseif item_type == L["Trade Goods"] and (item_stype == L["Armor Enchantment"] or item_stype == L["Weapon Enchantment"]) then
-			if PROFESSIONS[PROF_ENCHANTING] == true then
+			if known_professions[PROF_ENCHANTING] == true then
 				Scan(PROF_ENCHANTING, scan_item, max(1, item_level - 5), true)	-- Vellum item levels are 5 higher than the enchant which can be put on them.
 			end
 		else
-			for prof, known in pairs(PROFESSIONS) do
+			for prof, known in pairs(known_professions) do
 				if known == true then
 					Scan(prof, scan_item, 1, false)
 				end
 			end
 		end
-		Dewdrop:Open(anchor, "children", ShowRecipes)
+		ToggleDropDownMenu(1, nil, DropDown, anchor, 0, 0)
 	end
 end
 
@@ -654,6 +721,19 @@ do
 	end
 end
 _G["TradeRecipientItem7ItemButton"]:RegisterForClicks("AnyUp")
+
+-- Voodoo for UIDropDownMenu tooltips - thanks to Xinhuan for pointing out that not everything must be complex.
+hooksecurefunc("GameTooltip_AddNewbieTip",
+	       function(frame, normalText, r, g, b, newbieText, noNormalText)
+		       if normalText == "RevelationTooltip" then
+			       GameTooltip_SetDefaultAnchor(GameTooltip, frame)
+			       GameTooltip:AddLine(newbieText)
+			       GameTooltip:Show()
+		       elseif normalText == "RevelationItemLink" then
+			       GameTooltip_SetDefaultAnchor(GameTooltip, frame)
+			       GameTooltip:SetHyperlink(newbieText)
+		       end
+	       end)
 
 -------------------------------------------------------------------------------
 -- Configuration

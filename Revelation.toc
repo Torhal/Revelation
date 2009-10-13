@@ -7,7 +7,7 @@
 ## X-Email: torhal-wow@googlegroups.com
 ## X-Category: Professions
 ## X-Credits: Translations by Vastilia (French), erwinmeier (German), yondrin (Russian), wowuicn (Simplified Chinese), yllelder (Spanish), acatzlu (Traditional Chinese).
-## OptionalDeps: Ace3, AceLibrary, DewdropLib, Ara_Broker_Tradeskills
+## OptionalDeps: Ace3, Ara_Broker_Tradeskills
 ## SavedVariables: RevelationConfig
 
 ## LoadManagers: AddonLoader
