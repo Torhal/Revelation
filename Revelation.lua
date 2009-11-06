@@ -214,7 +214,7 @@ do
 		if recipes["Nothing"] then wipe(recipes) end
 
 		local new_recipe = AcquireTable()
-		new_recipe.text = "|T"..icon_cache[normal_name]..":24:24|t".."  "..skill_name.color
+		new_recipe.text = "|T"..icon_cache[normal_name]..":24:24|t".."  "..skill_name.color.." ("..num_avail..")"
 		new_recipe.func = CraftItem
 		new_recipe.arg1 = string.format("%s:%d:1", prof, skill_idx)
 		new_recipe.hasArrow = has_arrow
@@ -288,7 +288,7 @@ do
 				found = true
 			end
 		elseif item.eqloc == "INVTYPE_2HWEAPON" then
-			if strfind(normal_name, eqref) or strfind(normal_name, EquipSlot["INVTYPE_WEAPON"]) or (item.stype == L["Staff"] and strfind(normal_name, L["Staff"])) then
+			if strfind(normal_name, eqref) or strfind(normal_name, EquipSlot["INVTYPE_WEAPON"]) or (item.stype == L["Staves"] and strfind(normal_name, L["Staff"])) then
 				found = true
 			end
 		elseif strfind(normal_name, eqref) then
