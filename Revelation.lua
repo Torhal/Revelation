@@ -211,9 +211,9 @@ do
 		if not icon_cache[normal_name] then
 			icon_cache[normal_name] = select(10, GetItemInfo(recipe_link)) or GetTradeSkillIcon(skill_idx)
 		end
-		if recipes["Nothing"] then wipe(recipes) end
 
 		local new_recipe = AcquireTable()
+		new_recipe.name = normal_name
 		new_recipe.text = "|T"..icon_cache[normal_name]..":24:24|t".."  "..skill_name.color.." ("..num_avail..")"
 		new_recipe.func = CraftItem
 		new_recipe.arg1 = string.format("%s:%d:1", prof, skill_idx)
@@ -222,7 +222,7 @@ do
 		new_recipe.tooltipText = recipe_link
 		new_recipe.notCheckable = true
 		new_recipe.subMenu = sub_menu
-		recipes[normal_name] = new_recipe
+		tinsert(recipes, new_recipe)
 	end
 end
 
@@ -527,6 +527,10 @@ do
 	end
 end	-- do
 
+local function NameSort(one, two)
+	return one.name < two.name
+end
+
 function Revelation:OnEnable()
 	-------------------------------------------------------------------------------
 	-- Create the dropdown frame, and set its state.
@@ -544,7 +548,9 @@ function Revelation:OnEnable()
 			local info
 
 			if level == 1 then
-				for k, v in pairs(recipes) do
+				table.sort(recipes, NameSort)
+
+				for k, v in ipairs(recipes) do
 					info = v
 					info.value = k
 					UIDropDownMenu_AddButton(info, level)
@@ -621,7 +627,6 @@ do
 			active_tables[i] = nil
 		end
 		wipe(recipes)
-		recipes["Nothing"] = EMPTY_RECIPE
 
 		-- Reset the table, they may have unlearnt a profession - I robbed Ackis!
 		for i in pairs(known_professions) do
@@ -671,6 +676,10 @@ do
 					Scan(prof, scan_item, 1, false)
 				end
 			end
+		end
+
+		if #recipes == 0 then
+			tinsert(recipes, EMPTY_RECIPE)
 		end
 		ToggleDropDownMenu(1, nil, DropDown, anchor, 0, 0)
 	end
