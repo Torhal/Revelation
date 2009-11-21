@@ -605,7 +605,8 @@ do
 	local EMPTY_RECIPE = {
 		text = L["Either no recipe or no reagents were found."],
 		func = function() CloseDropDownMenus() end,
-		hasArrow = false
+		hasArrow = false,
+		notCheckable = true
 	}
 	local scan_item = {}
 
@@ -808,6 +809,6 @@ end
 
 function Revelation:SetupOptions()
 	LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(NAME, GetOptions())
-	LibStub("AceConfig-3.0"):RegisterOptionsTable(NAME, GetOptions(), "revelation")
+	LibStub("AceConfig-3.0"):RegisterOptionsTable(NAME, GetOptions())
 	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions(NAME)
 end
