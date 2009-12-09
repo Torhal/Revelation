@@ -1,4 +1,4 @@
-## Interface: 30200
+## Interface: 30300
 ## Title: Revelation
 ## Notes: Allows tradeskill usage by clicking items or reagents.
 ## Author: Torhal
