@@ -239,9 +239,16 @@ do
 		return false
 	end
 
+	-- The level parameter only exists to make this interchangeable with IterEnchant()
 	function IterTrade(prof, skill_idx, item, skill_name, num_avail, level, single)
-		if num_avail < 1 or not IsReagent(item.name, skill_idx) then
-			return
+		local rune_forge = (item.type == L["Weapon"]) and (prof == PROF_RUNEFORGING)
+
+		if not rune_forge then
+			local is_reagent = IsReagent(item.name, skill_idx)
+
+			if num_avail < 1 or not is_reagent then
+				return
+			end
 		end
 		AddRecipe(prof, skill_name, skill_idx, single and 1 or num_avail)
 	end
