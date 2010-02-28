@@ -6,10 +6,7 @@ local _G = getfenv(0)
 local string = _G.string
 local table = _G.table
 
-local strfind, strsub, strsplit = string.find, string.sub, string.split
-
 local pairs, ipairs = _G.pairs, _G.ipairs
-local tinsert, tremove = table.insert, table.remove
 local wipe = _G.wipe
 
 local max = _G.max
@@ -40,16 +37,39 @@ local LibStub = _G.LibStub
 -------------------------------------------------------------------------------
 -- AddOn namespace
 -------------------------------------------------------------------------------
-local NAME = "Revelation"
-local Revelation = LibStub("AceAddon-3.0"):NewAddon(NAME, "AceHook-3.0")
+local ADDON_NAME = "Revelation"
+local Revelation = LibStub("AceAddon-3.0"):NewAddon(ADDON_NAME, "AceHook-3.0")
 
 local dev = false
 --@debug@
 dev = true
 --@end-debug@
-local L = LibStub("AceLocale-3.0"):GetLocale(NAME, "enUS", true, dev)
+local L = LibStub("AceLocale-3.0"):GetLocale(ADDON_NAME, "enUS", true, dev)
 
-local DropDown
+local debugger	= _G.tekDebug and _G.tekDebug:GetFrame(ADDON_NAME)
+
+local highlight = CreateFrame("Frame", nil, UIParent)
+highlight:SetFrameStrata("TOOLTIP")
+highlight:Hide()
+
+highlight._texture = highlight:CreateTexture(nil, "OVERLAY")
+highlight._texture:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+highlight._texture:SetBlendMode("ADD")
+highlight._texture:SetAllPoints(highlight)
+
+local dis_frame = CreateFrame("Button", "RevelationDisenchantFrame", UIParent, "SecureActionButtonTemplate")
+dis_frame:SetAttribute("type", "macro")
+dis_frame:SetScript("OnEnter", function(self, motion)
+				       highlight:SetParent(self)
+				       highlight:SetAllPoints(self)
+				       highlight:Show()
+			       end)
+dis_frame:SetScript("OnLeave", function()
+				       highlight:Hide()
+				       highlight:ClearAllPoints()
+				       highlight:SetParent(nil)
+			       end)
+dis_frame:Hide()
 
 -------------------------------------------------------------------------------
 -- Constants
@@ -71,6 +91,7 @@ local EquipSlot = {
 local PROF_ENCHANTING = GetSpellInfo(7411)
 local PROF_INSCRIPTION = GetSpellInfo(45357)
 local PROF_RUNEFORGING = GetSpellInfo(53428)
+local SPELL_DISENCHANT, _, DISENCHANT_ICON = GetSpellInfo(13262)
 
 local known_professions = {
 	[GetSpellInfo(2259)]	= false, -- Alchemy
@@ -99,15 +120,30 @@ local defaults = {
 -- Variables
 -------------------------------------------------------------------------------
 local recipes = {}
+local scan_item = {}
 local table_heap = {}
 local active_tables = {}
 local db
+local DropDown
+
+-- The bag_id and slot_id variables are used with Enchanting and Runeforging.
+local bag_id
+local slot_id
 
 -------------------------------------------------------------------------------
 -- Local functions
 -------------------------------------------------------------------------------
-local function printf(text, ...)
-	return print(string.format(text, ...))
+local function Debug(...)
+	if debugger then
+		debugger:AddMessage(string.join(", ", ...))
+	end
+end
+
+local function AcquireTable()
+	local tbl = table.remove(table_heap) or {}
+
+	active_tables[#active_tables + 1] = tbl
+	return tbl
 end
 
 local ModifiersPressed
@@ -134,18 +170,23 @@ end
 local OnCraftItems
 local AddRecipe
 do
-	local function AcquireTable()
-		local tbl = tremove(table_heap) or {}
-		active_tables[#active_tables + 1] = tbl
-		return tbl
-	end
-
 	local function CraftItem(self, data)
 		local prof, skill_idx, amount = string.split(":", data)
 
 		CastSpellByName(prof)
 		CloseTradeSkill()
-		DoTradeSkill(skill_idx, amount)
+
+		if (prof == PROF_ENCHANTING or prof == PROF_RUNEFORGING) and scan_item.type ~= L["Trade Goods"] then
+			DoTradeSkill(skill_idx, 1)
+
+			if bag_id and slot_id then
+				UseContainerItem(bag_id, slot_id)
+			elseif slot_id then
+				UseInventoryItem(slot_id)
+			end
+		else
+			DoTradeSkill(skill_idx, amount)
+		end
 		CloseDropDownMenus()
 	end
 	local craft_data
@@ -195,7 +236,7 @@ do
 			entry.tooltipTitle = "RevelationTooltip"
 			entry.tooltipText = L["Create every"].." "..normal_name.." "..L["you have reagents for."]
 			entry.notCheckable = true
-			tinsert(sub_menu, entry)
+			table.insert(sub_menu, entry)
 
 			local entry2 = AcquireTable()
 			entry2.text = " 1 - "..num_avail
@@ -204,7 +245,7 @@ do
 			entry2.tooltipTitle = "RevelationTooltip"
 			entry2.tooltipText = L["Create"].." 1 - "..num_avail.." "..normal_name.."."
 			entry2.notCheckable = true
-			tinsert(sub_menu, entry2)
+			table.insert(sub_menu, entry2)
 		end
 		local recipe_link = GetTradeSkillRecipeLink(skill_idx)
 
@@ -222,7 +263,7 @@ do
 		new_recipe.tooltipText = recipe_link
 		new_recipe.notCheckable = true
 		new_recipe.subMenu = sub_menu
-		tinsert(recipes, new_recipe)
+		table.insert(recipes, new_recipe)
 	end
 end
 
@@ -261,7 +302,7 @@ do
 	}
 
 	local WeaponEnch = {
-		L["Staff"], L["2H Weapon"], L["Weapon"]
+		L["Staff"], _G.ENCHSLOT_2HWEAPON, _G.ENCHSLOT_WEAPON
 	}
 
 	local EnchantLevel
@@ -275,30 +316,30 @@ do
 		local normal_name = skill_name.normal
 
 		if not eqref then
-			if strfind(item.name, L["Armor Vellum"]) then
+			if string.find(item.name, L["Armor Vellum"]) then
 				for k, v in pairs(ArmorEnch) do
-					if strfind(normal_name, v) then
+					if string.find(normal_name, v) then
 						found = true
 						break
 					end
 				end
-			elseif strfind(item.name, L["Weapon Vellum"]) then
+			elseif string.find(item.name, L["Weapon Vellum"]) then
 				for k, v in pairs(WeaponEnch) do
-					if strfind(normal_name, v) then
+					if string.find(normal_name, v) then
 						found = true
 						break
 					end
 				end
 			end
 		elseif item.eqloc == "INVTYPE_WEAPON" or item.eqloc == "INVTYPE_WEAPONMAINHAND" or item.eqloc == "INVTYPE_WEAPONOFFHAND" then
-			if (not strfind(normal_name, EquipSlot["INVTYPE_2HWEAPON"])) and strfind(normal_name, eqref) then
+			if (not string.find(normal_name, EquipSlot["INVTYPE_2HWEAPON"])) and string.find(normal_name, eqref) then
 				found = true
 			end
 		elseif item.eqloc == "INVTYPE_2HWEAPON" then
-			if strfind(normal_name, eqref) or strfind(normal_name, EquipSlot["INVTYPE_WEAPON"]) or (item.stype == L["Staves"] and strfind(normal_name, L["Staff"])) then
+			if string.find(normal_name, eqref) or string.find(normal_name, EquipSlot["INVTYPE_WEAPON"]) or (item.stype == L["Staves"] and string.find(normal_name, L["Staff"])) then
 				found = true
 			end
-		elseif strfind(normal_name, eqref) then
+		elseif string.find(normal_name, eqref) then
 			found = true
 		end
 
@@ -442,26 +483,63 @@ do
 				[64579] = 60,	-- Enchant Weapon - Blood Draining
 			}
 		end
-		local _, _, ench_str = strfind(GetTradeSkillRecipeLink(skill_idx), "^|%x+|H(.+)|h%[.+%]")
-		local _, ench_num = strsplit(":", ench_str)
+		local _, _, ench_str = string.find(GetTradeSkillRecipeLink(skill_idx), "^|%x+|H(.+)|h%[.+%]")
+		local _, ench_num = string.split(":", ench_str)
 		local ench_level = EnchantLevel[tonumber(ench_num)]
 
 		if ench_level and ench_level > level then
 			return
 		end
-		--	print(ench_str.." - "..normal_name)
 		AddRecipe(prof, skill_name, skill_idx, 1)
 	end
 end
 
 local Scan
 do
-	local DIFFICULTY = {
+	local DIFFICULTY_COLORS = {
 		["trivial"]	= "|cff808080",
 		["easy"]	= "|cff40bf40",
 		["medium"]	= "|cffffff00",
 		["optimal"]	= "|cffff8040",
 	}
+	local DISENCHANT_LINK = GetSpellLink(13262)
+
+	local CANNOT_DE = {
+		[5004] = true,
+		[11287] = true,
+		[11288] = true,
+		[11289] = true,
+		[11290] = true,
+		[12772] = true,
+		[14812] = true,
+		[18665] = true,
+		[20406] = true,
+		[20407] = true,
+		[20408] = true,
+		[21766] = true,
+		[29378] = true,
+		[31336] = true,
+		[32540] = true,
+		[32541] = true,
+		[32660] = true,
+		[32662] = true,
+	}
+
+	local function CanDisenchant()
+		local id = select(3, scan_item.link:find("item:(%d+):"))
+
+		if not id or (id and CANNOT_DE[tonumber(id)]) then
+			return false
+		end
+		local type = scan_item.type
+		local quality = scan_item.quality
+
+		if (type == _G.ARMOR or type == _G.ENCHSLOT_WEAPON) and quality > 1 and quality < 5 then
+			return true
+		end
+		return false
+	end
+
 	local name_pair = {}
 	local func
 	local ATSW_SkipSlowScan = _G.ATSW_SkipSlowScan
@@ -476,8 +554,8 @@ do
 
 		if prof == PROF_ENCHANTING then
 			if (EquipSlot[item.eqloc]
-			    or (strfind(item.name, L["Armor Vellum"])
-				or strfind(item.name, L["Weapon Vellum"]))) then
+			    or (string.find(item.name, L["Armor Vellum"])
+				or string.find(item.name, L["Weapon Vellum"]))) then
 				func = IterEnchant
 			end
 		end
@@ -496,11 +574,25 @@ do
 
 			if skill_name and skill_type ~= "header" then
 				name_pair.normal = skill_name
-				name_pair.color = DIFFICULTY[skill_type]..skill_name.."|r"
+				name_pair.color = DIFFICULTY_COLORS[skill_type]..skill_name.."|r"
 				func(prof, idx, item, name_pair, num_avail, level, single)
 			end
 		end
 		CloseTradeSkill()
+
+		if prof == PROF_ENCHANTING and CanDisenchant() then
+			local dis = AcquireTable()
+
+			dis.name = SPELL_DISENCHANT
+			dis.text = "|T"..DISENCHANT_ICON..":24:24|t".." "..SPELL_DISENCHANT
+			dis.func = nil
+			dis.arg1 = nil
+			dis.hasArrow = false
+			dis.tooltipTitle = "RevelationItemLink"
+			dis.tooltipText = DISENCHANT_LINK
+			dis.notCheckable = true
+			table.insert(recipes, dis)
+		end
 	end
 end	-- do
 
@@ -514,7 +606,7 @@ do
 		local LDBinfo = {
 			type = "launcher",
 			icon = "Interface\\Icons\\Spell_Fire_SealOfFire",
-			label = NAME,
+			label = ADDON_NAME,
 			OnClick = function(button)
 					  if options_frame:IsVisible() then
 						  options_frame:Hide()
@@ -523,8 +615,8 @@ do
 					  end
 				  end
 		}
-		self.DataObj = LibStub("LibDataBroker-1.1"):NewDataObject(NAME, LDBinfo)
-		self.db = LibStub("AceDB-3.0"):New(NAME.."Config", defaults)
+		self.DataObj = LibStub("LibDataBroker-1.1"):NewDataObject(ADDON_NAME, LDBinfo)
+		self.db = LibStub("AceDB-3.0"):New(ADDON_NAME.."Config", defaults)
 		self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
 		self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
 		self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
@@ -555,12 +647,27 @@ function Revelation:OnEnable()
 			local info
 
 			if level == 1 then
+				local list_frame = _G["DropDownList1"]
+				local list_name = list_frame:GetName()
+				local count = 1
+
 				table.sort(recipes, NameSort)
 
 				for k, v in ipairs(recipes) do
 					info = v
 					info.value = k
 					UIDropDownMenu_AddButton(info, level)
+
+					if v.name == SPELL_DISENCHANT then
+						local button = _G[list_name.."Button"..count]
+
+						dis_frame:SetParent(button)
+						dis_frame:SetPoint("TOPLEFT", button, "TOPLEFT")
+						dis_frame:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT")
+						dis_frame:SetAttribute("macrotext", string.format("/cast Disenchant\n/use %s %s", bag_id, slot_id))
+						dis_frame:Show()
+					end
+					count = count + 1
 				end
 			elseif level == 2 then
 				local sub_menu = recipes[UIDROPDOWNMENU_MENU_VALUE].subMenu
@@ -615,9 +722,8 @@ do
 		hasArrow = false,
 		notCheckable = true
 	}
-	local scan_item = {}
 
-	function Revelation:Menu(anchor, item_link)
+	function Revelation:CreateMenu(anchor, item_link)
 		if not item_link then
 			return
 		end
@@ -631,7 +737,7 @@ do
 
 		for i = 1, #active_tables do	-- Release the tables for re-use.
 			wipe(active_tables[i])
-			tinsert(table_heap, active_tables[i])
+			table.insert(table_heap, active_tables[i])
 			active_tables[i] = nil
 		end
 		wipe(recipes)
@@ -654,40 +760,43 @@ do
 			end
 		end
 
-		local item_name, _, _, item_level, _, item_type, item_stype, _, item_eqloc, _ = GetItemInfo(item_link)
+		local item_name, item_link, item_quality, item_level, item_minlevel, item_type, item_stype, _, item_eqloc, _ = GetItemInfo(item_link)
 
 		scan_item.name = item_name
+		scan_item.link = item_link
+		scan_item.quality = item_quality
 		scan_item.level = item_level
+		scan_item.minlevel = item_minlevel
 		scan_item.type = item_type
 		scan_item.stype = item_stype
 		scan_item.eqloc = item_eqloc
 
-		if item_type == L["Armor"] or strfind(item_type, L["Weapon"]) then
-			if known_professions[PROF_ENCHANTING] == true then
+		if item_type == _G.ARMOR or string.find(item_type, L["Weapon"]) then
+			if known_professions[PROF_ENCHANTING] then
 				Scan(PROF_ENCHANTING, scan_item, item_level, true)
 			end
 
-			if known_professions[PROF_INSCRIPTION] == true then
+			if known_professions[PROF_INSCRIPTION] then
 				Scan(PROF_INSCRIPTION, scan_item, item_level, true)
 			end
 
-			if known_professions[PROF_RUNEFORGING] == true then
+			if known_professions[PROF_RUNEFORGING] then
 				Scan(PROF_RUNEFORGING, scan_item, item_level, true)
 			end
 		elseif item_type == L["Trade Goods"] and (item_stype == L["Armor Enchantment"] or item_stype == L["Weapon Enchantment"]) then
-			if known_professions[PROF_ENCHANTING] == true then
+			if known_professions[PROF_ENCHANTING] then
 				Scan(PROF_ENCHANTING, scan_item, max(1, item_level - 5), true)	-- Vellum item levels are 5 higher than the enchant which can be put on them.
 			end
 		else
 			for prof, known in pairs(known_professions) do
-				if known == true then
+				if known then
 					Scan(prof, scan_item, 1, false)
 				end
 			end
 		end
 
 		if #recipes == 0 then
-			tinsert(recipes, EMPTY_RECIPE)
+			table.insert(recipes, EMPTY_RECIPE)
 		end
 		ToggleDropDownMenu(1, nil, DropDown, anchor, 0, 0)
 	end
@@ -704,12 +813,15 @@ do
 	local click_handled = false		-- For HandleModifiedItemClick kludge...
 
 	function Revelation:PaperDollItemSlotButton_OnModifiedClick(...)
-		local hookSelf, button = ...
+		local hooked_self, button = ...
 
 		click_handled = true
+		bag_id = nil
+		slot_id = nil
 
 		if ModifiersPressed() and button == MouseButton[db.button] then
-			self:Menu(hookSelf, GetInventoryItemLink("player", hookSelf:GetID()))
+			slot_id = hooked_self:GetID()
+			self:CreateMenu(hooked_self, GetInventoryItemLink("player", slot_id))
 		else
 			self.hooks.PaperDollItemSlotButton_OnModifiedClick(...)
 		end
@@ -717,12 +829,16 @@ do
 	end
 
 	function Revelation:ContainerFrameItemButton_OnModifiedClick(...)
-		local hookSelf, button = ...
+		local hooked_self, button = ...
 
 		click_handled = true
+		bag_id = nil
+		slot_id = nil
 
 		if ModifiersPressed() and button == MouseButton[db.button] then
-			self:Menu(hookSelf, GetContainerItemLink(hookSelf:GetParent():GetID(), hookSelf:GetID()))
+			bag_id = hooked_self:GetParent():GetID()
+			slot_id = hooked_self:GetID()
+			self:CreateMenu(hooked_self, GetContainerItemLink(bag_id, slot_id))
 		end
 		self.hooks.ContainerFrameItemButton_OnModifiedClick(...)
 		click_handled = false
@@ -732,7 +848,7 @@ do
 	-- A.K.A.: "Will not be traded"
 	function Revelation:HandleModifiedItemClick(...)
 		if not click_handled then
-			self:Menu(nil, ...)
+			self:CreateMenu(nil, ...)
 		end
 		return self.hooks.HandleModifiedItemClick(...)
 	end
@@ -778,7 +894,7 @@ do
 		if not options then
 			options = {
 				type = "group",
-				name = NAME,
+				name = ADDON_NAME,
 				args = {
 					modifier = {
 						order = 1,
@@ -815,7 +931,7 @@ do
 end
 
 function Revelation:SetupOptions()
-	LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(NAME, GetOptions())
-	LibStub("AceConfig-3.0"):RegisterOptionsTable(NAME, GetOptions())
-	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions(NAME)
+	LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(ADDON_NAME, GetOptions())
+	LibStub("AceConfig-3.0"):RegisterOptionsTable(ADDON_NAME, GetOptions())
+	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions(ADDON_NAME)
 end
