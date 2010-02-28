@@ -88,10 +88,13 @@ local EquipSlot = {
 	["INVTYPE_WEAPONMAINHAND"]	= L["Weapon"],
 	["INVTYPE_WEAPONOFFHAND"]	= L["Weapon"]
 }
-local PROF_ENCHANTING = GetSpellInfo(7411)
-local PROF_INSCRIPTION = GetSpellInfo(45357)
-local PROF_RUNEFORGING = GetSpellInfo(53428)
-local SPELL_DISENCHANT, _, DISENCHANT_ICON = GetSpellInfo(13262)
+local PROF_ENCHANTING		= GetSpellInfo(7411)
+local PROF_INSCRIPTION		= GetSpellInfo(45357)
+local PROF_JEWELCRAFTING	= GetSpellInfo(25229)
+local PROF_RUNEFORGING		= GetSpellInfo(53428)
+
+local SPELL_DISENCHANT, _, DISENCHANT_ICON	= GetSpellInfo(13262)
+local SPELL_PROSPECTING, _, PROSPECTING_ICON	= GetSpellInfo(31252)
 
 local known_professions = {
 	[GetSpellInfo(2259)]	= false, -- Alchemy
@@ -103,7 +106,7 @@ local known_professions = {
 	[GetSpellInfo(2108)]	= false, -- Leatherworking
 	[GetSpellInfo(61422)]	= false, -- Smelting
 	[GetSpellInfo(3908)]	= false, -- Tailoring
-	[GetSpellInfo(25229)]	= false, -- Jewelcrafting
+	[PROF_JEWELCRAFTING]	= false, -- Jewelcrafting
 	[PROF_INSCRIPTION]	= false, -- Inscription
 	[PROF_RUNEFORGING]	= false, -- Runeforging
 }
@@ -505,24 +508,23 @@ do
 	local DISENCHANT_LINK = GetSpellLink(13262)
 
 	local CANNOT_DE = {
-		[5004] = true,
-		[11287] = true,
-		[11288] = true,
-		[11289] = true,
-		[11290] = true,
-		[12772] = true,
-		[14812] = true,
-		[18665] = true,
-		[20406] = true,
-		[20407] = true,
-		[20408] = true,
-		[21766] = true,
-		[29378] = true,
-		[31336] = true,
-		[32540] = true,
-		[32541] = true,
-		[32660] = true,
-		[32662] = true,
+		[11287] = true,	-- Lesser Magic Wand
+		[11288] = true,	-- Greater Magic Wand
+		[11289] = true,	-- Lesser Mystic Wand
+		[11290] = true,	-- Greater Mystic Wand
+		[12772] = true,	-- Inlaid Thorium Hammer
+		[14812] = true,	-- Warstrike Buckler
+		[18665] = true,	-- The Eye of Shadow
+		[20406] = true,	-- Twilight Cultist Mantle
+		[20407] = true,	-- Twilight Cultist Robe
+		[20408] = true,	-- Twilight Cultist Cowl
+		[21766] = true,	-- Opal Necklace of Impact
+		[29378] = true,	-- Starheart Baton
+		[31336] = true,	-- Blade of Wizardry
+		[32540] = true,	-- Terokk's Might
+		[32541] = true,	-- Terokk's Wisdom
+		[32660] = true,	-- Crystalforged Sword
+		[32662] = true,	-- Flaming Quartz Staff
 	}
 
 	local function CanDisenchant()
@@ -538,6 +540,29 @@ do
 			return true
 		end
 		return false
+	end
+	local PROSPECTING_LINK = GetSpellLink(31252)
+
+	local CAN_PROSPECT = {
+		[2770]	= true,	-- Copper Ore
+		[2771]	= true,	-- Tin Ore
+		[2772]	= true,	-- Iron Ore
+		[3858]	= true,	-- Mithril Ore
+		[10620]	= true,	-- Thorium Ore
+		[23452]	= true,	-- Adamantite Ore
+		[23424]	= true,	-- Fel Iron Ore
+		[36909]	= true,	-- Cobalt Ore
+		[36910]	= true,	-- Titanium Ore
+		[36912]	= true,	-- Saronite Ore
+	}
+
+	local function CanProspect()
+		local id = select(3, scan_item.link:find("item:(%d+):"))
+
+		if not id or (id and not CAN_PROSPECT[tonumber(id)]) then
+			return false
+		end
+		return true
 	end
 
 	local name_pair = {}
@@ -581,17 +606,25 @@ do
 		CloseTradeSkill()
 
 		if prof == PROF_ENCHANTING and CanDisenchant() then
-			local dis = AcquireTable()
+			local entry = AcquireTable()
 
-			dis.name = SPELL_DISENCHANT
-			dis.text = "|T"..DISENCHANT_ICON..":24:24|t".." "..SPELL_DISENCHANT
-			dis.func = nil
-			dis.arg1 = nil
-			dis.hasArrow = false
-			dis.tooltipTitle = "RevelationItemLink"
-			dis.tooltipText = DISENCHANT_LINK
-			dis.notCheckable = true
-			table.insert(recipes, dis)
+			entry.name = SPELL_DISENCHANT
+			entry.text = "|T"..DISENCHANT_ICON..":24:24|t".." "..SPELL_DISENCHANT
+			entry.hasArrow = false
+			entry.tooltipTitle = "RevelationItemLink"
+			entry.tooltipText = DISENCHANT_LINK
+			entry.notCheckable = true
+			table.insert(recipes, entry)
+		elseif prof == PROF_JEWELCRAFTING and CanProspect() then
+			local entry = AcquireTable()
+
+			entry.name = SPELL_PROSPECTING
+			entry.text = "|T"..PROSPECTING_ICON..":24:24|t".." "..SPELL_PROSPECTING
+			entry.hasArrow = false
+			entry.tooltipTitle = "RevelationItemLink"
+			entry.tooltipText = PROSPECTING_LINK
+			entry.notCheckable = true
+			table.insert(recipes, entry)
 		end
 	end
 end	-- do
@@ -600,7 +633,7 @@ end	-- do
 -- Main AddOn functions
 -------------------------------------------------------------------------------
 do
-	local options_frame = InterfaceOptionsFrame
+	local options_frame = _G.InterfaceOptionsFrame
 
 	function Revelation:OnInitialize()
 		local LDBinfo = {
@@ -611,7 +644,7 @@ do
 					  if options_frame:IsVisible() then
 						  options_frame:Hide()
 					  else
-						  InterfaceOptionsFrame_OpenToCategory(Revelation.optionsFrame)
+						  _G.InterfaceOptionsFrame_OpenToCategory(Revelation.optionsFrame)
 					  end
 				  end
 		}
@@ -664,7 +697,15 @@ function Revelation:OnEnable()
 						dis_frame:SetParent(button)
 						dis_frame:SetPoint("TOPLEFT", button, "TOPLEFT")
 						dis_frame:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT")
-						dis_frame:SetAttribute("macrotext", string.format("/cast Disenchant\n/use %s %s", bag_id, slot_id))
+						dis_frame:SetAttribute("macrotext", string.format("/cast %s\n/use %s %s", SPELL_DISENCHANT, bag_id, slot_id))
+						dis_frame:Show()
+					elseif v.name == SPELL_PROSPECTING then
+						local button = _G[list_name.."Button"..count]
+
+						dis_frame:SetParent(button)
+						dis_frame:SetPoint("TOPLEFT", button, "TOPLEFT")
+						dis_frame:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT")
+						dis_frame:SetAttribute("macrotext", string.format("/cast %s\n/use %s %s", SPELL_PROSPECTING, bag_id, slot_id))
 						dis_frame:Show()
 					end
 					count = count + 1
@@ -770,6 +811,8 @@ do
 		scan_item.type = item_type
 		scan_item.stype = item_stype
 		scan_item.eqloc = item_eqloc
+
+		Debug("Item type", item_type, "Item subtype", item_stype)
 
 		if item_type == _G.ARMOR or string.find(item_type, L["Weapon"]) then
 			if known_professions[PROF_ENCHANTING] then
