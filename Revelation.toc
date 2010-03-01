@@ -32,4 +32,5 @@ Localization\zhTW.lua
 Enchanting.lua
 Inscription.lua
 Jewelcrafting.lua
+Lockpicking.lua
 Revelation.lua

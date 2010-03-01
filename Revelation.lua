@@ -88,6 +88,9 @@ local SPELL_DISENCHANT		= GetSpellInfo(13262)
 local SPELL_MILLING		= GetSpellInfo(51005)
 local SPELL_PROSPECTING		= GetSpellInfo(31252)
 
+local SPELL_PICK_LOCK		= GetSpellInfo(1804)
+local ICON_PICK_LOCK		= select(3, GetSpellInfo(SPELL_PICK_LOCK))
+
 local EquipSlot = {
 	["INVTYPE_CHEST"]		= L["Chest"],
 	["INVTYPE_ROBE"]		= L["Chest"],
@@ -492,7 +495,6 @@ do
 				known_professions[spell_name] = true
 			end
 		end
-
 		local item_name, item_link, item_quality, item_level, item_minlevel, item_type, item_subtype, item_stack, item_eqloc, _ = GetItemInfo(item_link)
 
 		cur_item.name = item_name
@@ -506,6 +508,9 @@ do
 		cur_item.eqloc = item_eqloc
 
 		Debug("Item type", item_type, "Item subtype", item_subtype)
+
+		local sfx = tonumber(GetCVar("Sound_EnableSFX"))
+		SetCVar("Sound_EnableSFX", 0)
 
 		if item_type == _G.ARMOR or string.find(item_type, L["Weapon"]) then
 			if known_professions[PROF_ENCHANTING] then
@@ -524,6 +529,14 @@ do
 				-- Vellum item levels are 5 higher than the enchant which can be put on them.
 				Scan(PROF_ENCHANTING, max(1, item_level - 5), true)
 			end
+		elseif common.CanPick() then
+			local entry = AcquireTable()
+
+			entry.name = SPELL_PICK_LOCK
+			entry.text = string.format("|T%s:24:24|t %s", ICON_PICK_LOCK, SPELL_PICK_LOCK)
+			entry.hasArrow = false
+			entry.notCheckable = true
+			table.insert(recipes, entry)
 		else
 			for prof, known in pairs(known_professions) do
 				if known then
@@ -536,6 +549,7 @@ do
 			table.insert(recipes, EMPTY_RECIPE)
 		end
 		ToggleDropDownMenu(1, nil, DropDown, anchor, 0, 0)
+		SetCVar("Sound_EnableSFX", sfx)
 	end
 end
 
@@ -571,6 +585,7 @@ do
 		[SPELL_DISENCHANT]	= GetSpellLink(13262),
 		[SPELL_MILLING]		= GetSpellLink(51005),
 		[SPELL_PROSPECTING]	= GetSpellLink(31252),
+		[SPELL_PICK_LOCK]	= GetSpellLink(1804),
 	}
 
 	local function NameSort(one, two)
