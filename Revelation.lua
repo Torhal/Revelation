@@ -122,10 +122,10 @@ local known_professions = {
 }
 
 local defaults = {
-	profile = {
+	global = {
 		modifier = 1,	-- ALT
-		modifier2 = 4,	-- NONE
-		button = 1	-- LeftButton
+		modifier2 = 10,	-- NONE
+		button = 2	-- RightButton
 	}
 }
 
@@ -574,7 +574,7 @@ do
 		}
 		self.DataObj = LibStub("LibDataBroker-1.1"):NewDataObject(ADDON_NAME, LDBinfo)
 		self.db = LibStub("AceDB-3.0"):New(ADDON_NAME.."Config", defaults)
-		db = self.db.profile
+		db = self.db.global
 
 		self:SetupOptions()
 	end
