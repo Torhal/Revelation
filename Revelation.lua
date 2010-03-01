@@ -17,7 +17,7 @@ local select = _G.select
 -- Localized Blizzard API
 -------------------------------------------------------------------------------
 local CastSpellByName = _G.CastSpellByName
-local CloseTradeSkill, DoTradeSkill = _G.CloseTradeSkill, _G.DoTradeSkill
+local CloseTradeSkill = _G.CloseTradeSkill
 local GameTooltip, GetSpellInfo = _G.GameTooltip, _G.GetSpellInfo
 local GetContainerItemLink = _G.GetContainerItemLink
 local GetInventoryItemLink = _G.GetInventoryItemLink
@@ -37,7 +37,7 @@ local LibStub = _G.LibStub
 -------------------------------------------------------------------------------
 -- AddOn namespace
 -------------------------------------------------------------------------------
-local ADDON_NAME = "Revelation"
+local ADDON_NAME, common = ...
 local Revelation = LibStub("AceAddon-3.0"):NewAddon(ADDON_NAME, "AceHook-3.0")
 
 local dev = false
@@ -57,23 +57,37 @@ highlight._texture:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
 highlight._texture:SetBlendMode("ADD")
 highlight._texture:SetAllPoints(highlight)
 
-local dis_frame = CreateFrame("Button", "RevelationDisenchantFrame", UIParent, "SecureActionButtonTemplate")
-dis_frame:SetAttribute("type", "macro")
-dis_frame:SetScript("OnEnter", function(self, motion)
-				       highlight:SetParent(self)
-				       highlight:SetAllPoints(self)
-				       highlight:Show()
+local secure_frame = CreateFrame("Button", "RevelationSecureFrame", UIParent, "SecureActionButtonTemplate")
+secure_frame:SetAttribute("type", "macro")
+secure_frame:SetScript("OnEnter", function(self, motion)
+					  GameTooltip_SetDefaultAnchor(GameTooltip, self)
+					  GameTooltip:SetHyperlink(self.link)
+
+					  highlight:SetParent(self)
+					  highlight:SetAllPoints(self)
+					  highlight:Show()
 			       end)
-dis_frame:SetScript("OnLeave", function()
-				       highlight:Hide()
-				       highlight:ClearAllPoints()
-				       highlight:SetParent(nil)
+secure_frame:SetScript("OnLeave", function()
+					  GameTooltip:Hide()
+					  highlight:Hide()
+					  highlight:ClearAllPoints()
+					  highlight:SetParent(nil)
 			       end)
-dis_frame:Hide()
+
+secure_frame:Hide()
 
 -------------------------------------------------------------------------------
 -- Constants
 -------------------------------------------------------------------------------
+local PROF_ENCHANTING		= GetSpellInfo(7411)
+local PROF_INSCRIPTION		= GetSpellInfo(45357)
+local PROF_JEWELCRAFTING	= GetSpellInfo(25229)
+local PROF_RUNEFORGING		= GetSpellInfo(53428)
+
+local SPELL_DISENCHANT		= GetSpellInfo(13262)
+local SPELL_MILLING		= GetSpellInfo(51005)
+local SPELL_PROSPECTING		= GetSpellInfo(31252)
+
 local EquipSlot = {
 	["INVTYPE_CHEST"]		= L["Chest"],
 	["INVTYPE_ROBE"]		= L["Chest"],
@@ -88,13 +102,6 @@ local EquipSlot = {
 	["INVTYPE_WEAPONMAINHAND"]	= L["Weapon"],
 	["INVTYPE_WEAPONOFFHAND"]	= L["Weapon"]
 }
-local PROF_ENCHANTING		= GetSpellInfo(7411)
-local PROF_INSCRIPTION		= GetSpellInfo(45357)
-local PROF_JEWELCRAFTING	= GetSpellInfo(25229)
-local PROF_RUNEFORGING		= GetSpellInfo(53428)
-
-local SPELL_DISENCHANT, _, DISENCHANT_ICON	= GetSpellInfo(13262)
-local SPELL_PROSPECTING, _, PROSPECTING_ICON	= GetSpellInfo(31252)
 
 local known_professions = {
 	[GetSpellInfo(2259)]	= false, -- Alchemy
@@ -120,27 +127,26 @@ local defaults = {
 }
 
 -------------------------------------------------------------------------------
--- Variables
+-- Variables.
 -------------------------------------------------------------------------------
+common.cur_item = {}
+
+local cur_item = common.cur_item
 local recipes = {}
-local scan_item = {}
 local table_heap = {}
 local active_tables = {}
 local db
 local DropDown
 
--- The bag_id and slot_id variables are used with Enchanting and Runeforging.
-local bag_id
-local slot_id
-
 -------------------------------------------------------------------------------
 -- Local functions
 -------------------------------------------------------------------------------
-local function Debug(...)
+function common.Debug(...)
 	if debugger then
 		debugger:AddMessage(string.join(", ", ...))
 	end
 end
+local Debug = common.Debug
 
 local function AcquireTable()
 	local tbl = table.remove(table_heap) or {}
@@ -179,13 +185,13 @@ do
 		CastSpellByName(prof)
 		CloseTradeSkill()
 
-		if (prof == PROF_ENCHANTING or prof == PROF_RUNEFORGING) and scan_item.type ~= L["Trade Goods"] then
+		if (prof == PROF_ENCHANTING or prof == PROF_RUNEFORGING) and cur_item.type ~= L["Trade Goods"] then
 			DoTradeSkill(skill_idx, 1)
 
-			if bag_id and slot_id then
-				UseContainerItem(bag_id, slot_id)
-			elseif slot_id then
-				UseInventoryItem(slot_id)
+			if common.bag_id and common.slot_id then
+				UseContainerItem(common.bag_id, common.slot_id)
+			elseif common.slot_id then
+				UseInventoryItem(common.slot_id)
 			end
 		else
 			DoTradeSkill(skill_idx, amount)
@@ -270,36 +276,32 @@ do
 	end
 end
 
-local IterTrade
-do
-	local function IsReagent(item_name, recipe)
-		local num = GetTradeSkillNumReagents(recipe)
+-- The level parameter only exists to make this interchangeable with IterEnchant()
+local function IterTrade(prof, skill_idx, skill_name, num_avail, level, single)
+	local rune_forge = (cur_item.type == L["Weapon"]) and (prof == PROF_RUNEFORGING)
 
-		for reagent = 1, num do
-			if item_name == GetTradeSkillReagentInfo(recipe, reagent) then
-				return true
+	if not rune_forge then
+		local is_reagent = false
+
+		for reagent = 1, GetTradeSkillNumReagents(skill_idx) do
+			if cur_item.name == GetTradeSkillReagentInfo(skill_idx, reagent) then
+				Debug("IterTrade()", cur_item.name, skill_idx, " - reagent", reagent)
+				is_reagent = true
+				break
 			end
 		end
-		return false
-	end
 
-	-- The level parameter only exists to make this interchangeable with IterEnchant()
-	function IterTrade(prof, skill_idx, item, skill_name, num_avail, level, single)
-		local rune_forge = (item.type == L["Weapon"]) and (prof == PROF_RUNEFORGING)
-
-		if not rune_forge then
-			local is_reagent = IsReagent(item.name, skill_idx)
-
-			if num_avail < 1 or not is_reagent then
-				return
-			end
+		if num_avail < 1 or not is_reagent then
+			return
 		end
-		AddRecipe(prof, skill_name, skill_idx, single and 1 or num_avail)
 	end
+	AddRecipe(prof, skill_name, skill_idx, single and 1 or num_avail)
 end
 
 local IterEnchant
 do
+	local EnchantLevels
+
 	local ArmorEnch = {
 		L["Chest"], L["Boots"], L["Bracer"], L["Gloves"], L["Ring"], L["Cloak"], L["Shield"]
 	}
@@ -308,25 +310,24 @@ do
 		L["Staff"], _G.ENCHSLOT_2HWEAPON, _G.ENCHSLOT_WEAPON
 	}
 
-	local EnchantLevel
-	function IterEnchant(prof, skill_idx, item, skill_name, num_avail, level, single)
+	function IterEnchant(prof, skill_idx, skill_name, num_avail, level, single)
 		if num_avail < 1 then
 			return
 		end
 
-		local eqref = item.eqloc and EquipSlot[item.eqloc] or nil
+		local eqref = cur_item.eqloc and EquipSlot[cur_item.eqloc] or nil
 		local found = false
 		local normal_name = skill_name.normal
 
 		if not eqref then
-			if string.find(item.name, L["Armor Vellum"]) then
+			if string.find(cur_item.name, L["Armor Vellum"]) then
 				for k, v in pairs(ArmorEnch) do
 					if string.find(normal_name, v) then
 						found = true
 						break
 					end
 				end
-			elseif string.find(item.name, L["Weapon Vellum"]) then
+			elseif string.find(cur_item.name, L["Weapon Vellum"]) then
 				for k, v in pairs(WeaponEnch) do
 					if string.find(normal_name, v) then
 						found = true
@@ -334,12 +335,12 @@ do
 					end
 				end
 			end
-		elseif item.eqloc == "INVTYPE_WEAPON" or item.eqloc == "INVTYPE_WEAPONMAINHAND" or item.eqloc == "INVTYPE_WEAPONOFFHAND" then
+		elseif cur_item.eqloc == "INVTYPE_WEAPON" or cur_item.eqloc == "INVTYPE_WEAPONMAINHAND" or cur_item.eqloc == "INVTYPE_WEAPONOFFHAND" then
 			if (not string.find(normal_name, EquipSlot["INVTYPE_2HWEAPON"])) and string.find(normal_name, eqref) then
 				found = true
 			end
-		elseif item.eqloc == "INVTYPE_2HWEAPON" then
-			if string.find(normal_name, eqref) or string.find(normal_name, EquipSlot["INVTYPE_WEAPON"]) or (item.stype == L["Staves"] and string.find(normal_name, L["Staff"])) then
+		elseif cur_item.eqloc == "INVTYPE_2HWEAPON" then
+			if string.find(normal_name, eqref) or string.find(normal_name, EquipSlot["INVTYPE_WEAPON"]) or (cur_item.subtype == L["Staves"] and string.find(normal_name, L["Staff"])) then
 				found = true
 			end
 		elseif string.find(normal_name, eqref) then
@@ -349,146 +350,11 @@ do
 		if not found then
 			return
 		end
+		EnchantLevels = common.GetEnchantLevels()
 
-		if not EnchantLevel then
-			EnchantLevel = {
-				[25086] = 35,	-- Enchant Cloak - Dodge
-				[27899] = 35,	-- Enchant Bracer - Brawn
-				[27905] = 35,	-- Enchant Bracer - Stats
-				[27906] = 35,	-- Enchant Bracer - Major Defense
-				[27911] = 35,	-- Enchant Bracer - Superior Healing
-				[27913] = 35,	-- Enchant Bracer - Restore Mana Prime
-				[27914] = 35,	-- Enchant Bracer - Fortitude
-				[27917] = 35,	-- Enchant Bracer - Spellpower
-				[27920] = 35,	-- Enchant Ring - Striking
-				[27924] = 35,	-- Enchant Ring - Spellpower
-				[27926] = 35,	-- Enchant Ring - Healing Power
-				[27927] = 35,	-- Enchant Ring - Stats
-				[27944] = 35,	-- Enchant Shield - Tough Shield
-				[27945] = 35,	-- Enchant Shield - Intellect
-				[27946] = 35,	-- Enchant Shield - Shield Block
-				[27947] = 35,	-- Enchant Shield - Resistance
-				[27948] = 35,	-- Enchant Boots - Vitality
-				[27950] = 35,	-- Enchant Boots - Fortitude
-				[27951] = 35,	-- Enchant Boots - Dexterity
-				[27954] = 35,	-- Enchant Boots - Surefooted
-				[27957] = 35,	-- Enchant Chest - Exceptional Health
-				[27958] = 60,	-- Enchant Chest - Exceptional Mana
-				[27960] = 35,	-- Enchant Chest - Exceptional Stats
-				[27961] = 35,	-- Enchant Cloak - Major Armor
-				[27962] = 35,	-- Enchant Cloak - Major Resistance
-				[27967] = 35,	-- Enchant Weapon - Major Striking
-				[27968] = 35,	-- Enchant Weapon - Major Intellect
-				[27971] = 35,	-- Enchant 2H Weapon - Savagery
-				[27972] = 35,	-- Enchant Weapon - Potency
-				[27975] = 35,	-- Enchant Weapon - Major Spellpower
-				[27977] = 35,	-- Enchant 2H Weapon - Major Agility
-				[27981] = 35,	-- Enchant Weapon - Sunfire
-				[27982] = 35,	-- Enchant Weapon - Soulfrost
-				[27984] = 35,	-- Enchant Weapon - Mongoose
-				[28003] = 35,	-- Enchant Weapon - Spellsurge
-				[28004] = 35,	-- Enchant Weapon - Battlemaster
-				[33990] = 35,	-- Enchant Chest - Major Spirit
-				[33991] = 35,	-- Enchant Chest - Restore Mana Prime
-				[33992] = 35,	-- Enchant Chest - Major Resilience
-				[33993] = 35,	-- Enchant Gloves - Blasting
-				[33994] = 35,	-- Enchant Gloves - Precise Strikes
-				[33995] = 35,	-- Enchant Gloves - Major Strength
-				[33996] = 35,	-- Enchant Gloves - Assault
-				[33997] = 35,	-- Enchant Gloves - Major Spellpower
-				[33999] = 35,	-- Enchant Gloves - Major Healing
-				[34001] = 35,	-- Enchant Bracer - Major Intellect
-				[34002] = 35,	-- Enchant Bracer - Assault
-				[34003] = 35,	-- Enchant Cloak - Spell Penetration
-				[34004] = 35,	-- Enchant Cloak - Greater Agility
-				[34005] = 35,	-- Enchant Cloak - Greater Arcane Resistance
-				[34006] = 35,	-- Enchant Cloak - Greater Shadow Resistance
-				[34007] = 35,	-- Enchant Boots - Cat's Swiftness
-				[34008] = 35,	-- Enchant Boots - Boar's Speed
-				[34009] = 35,	-- Enchant Shield - Major Stamina
-				[34010] = 35,	-- Enchant Weapon - Major Healing
-				[42620] = 35,	-- Enchant Weapon - Greater Agility
-				[42974] = 60,	-- Enchant Weapon - Executioner
-				[44383] = 35,	-- Enchant Shield - Resilience
-				[44483] = 60,	-- Enchant Cloak - Superior Frost Resistance
-				[44484] = 60,	-- Enchant Gloves - Expertise
-				[44488] = 60,	-- Enchant Gloves - Precision
-				[44489] = 60,	-- Enchant Shield - Defense
-				[44492] = 60,	-- Enchant Chest - Mighty Health
-				[44494] = 60,	-- Enchant Cloak - Superior Nature Resistance
-				[44500] = 60,	-- Enchant Cloak - Superior Agility
-				[44506] = 60,	-- Enchant Gloves - Gatherer
-				[44508] = 60,	-- Enchant Boots - Greater Spirit
-				[44509] = 60,	-- Enchant Chest - Greater Mana Restoration
-				[44510] = 60,	-- Enchant Weapon - Exceptional Spirit
-				[44513] = 60,	-- Enchant Gloves - Greater Assault
-				[44524] = 60,	-- Enchant Weapon - Icebreaker
-				[44528] = 60,	-- Enchant Boots - Greater Fortitude
-				[44529] = 60,	-- Enchant Gloves - Major Agility
-				[44555] = 60,	-- Enchant Bracers - Exceptional Intellect
-				[44556] = 60,	-- Enchant Cloak - Superior Fire Resistance
-				[44575] = 60,	-- Enchant Bracers - Greater Assault
-				[44576] = 60,	-- Enchant Weapon - Lifeward
-				[44582] = 60,	-- Enchant Cloak - Spell Piercing
-				[44584] = 60,	-- Enchant Boots - Greater Vitality
-				[44588] = 60,	-- Enchant Chest - Exceptional Resilience
-				[44589] = 60,	-- Enchant Boots - Superior Agility
-				[44590] = 60,	-- Enchant Cloak - Superior Shadow Resistance
-				[44591] = 60,	-- Enchant Cloak - Titanweave
-				[44592] = 60,	-- Enchant Gloves - Exceptional Spellpower
-				[44593] = 60,	-- Enchant Bracers - Major Spirit
-				[44595] = 60,	-- Enchant 2H Weapon - Scourgebane
-				[44596] = 60,	-- Enchant Cloak - Superior Arcane Resistance
-				[44598] = 60,	-- Enchant Bracers - Expertise
-				[44612] = 60,	-- Enchant Gloves - Greater Blasting
-				[44616] = 60,	-- Enchant Bracers - Greater Stats
-				[44621] = 60,	-- Enchant Weapon - Giant Slayer
-				[44623] = 60,	-- Enchant Chest - Super Stats
-				[44625] = 60,	-- Enchant Gloves - Armsman
-				[44629] = 60,	-- Enchant Weapon - Exceptional Spellpower
-				[44630] = 60,	-- Enchant 2H Weapon - Greater Savagery
-				[44631] = 60,	-- Enchant Cloak - Shadow Armor
-				[44633] = 60,	-- Enchant Weapon - Exceptional Agility
-				[44635] = 60,	-- Enchant Bracers - Greater Spellpower
-				[44636] = 60,	-- Enchant Ring - Greater Spellpower
-				[44645] = 60,	-- Enchant Ring - Assault
-				[46578] = 60,	-- Enchant Weapon - Deathfrost
-				[46594] = 35,	-- Enchant Chest - Defense
-				[47051] = 35,	-- Enchant Cloak - Steelweave
-				[47672] = 60,	-- Enchant Cloak - Mighty Armor
-				[47766] = 60,	-- Enchant Chest - Greater Defense
-				[47898] = 60,	-- Enchant Cloak - Greater Speed
-				[47899] = 60,	-- Enchant Cloak - Wisdom
-				[47900] = 60,	-- Enchant Chest - Super Health
-				[47901] = 60,	-- Enchant Boots - Tuskarr's Vitality
-				[59619] = 60,	-- Enchant Weapon - Accuracy
-				[59621] = 60,	-- Enchant Weapon - Berserking
-				[59625] = 60,	-- Enchant Weapon - Black Magic
-				[60606] = 60,	-- Enchant Boots - Assault
-				[60609] = 60,	-- Enchant Cloak - Speed
-				[60616] = 60,	-- Enchant Bracers - Striking
-				[60621] = 60,	-- Enchant Weapon - Greater Potency
-				[60623] = 60,	-- Enchant Boots - Icewalker
-				[60653] = 60,	-- Enchant Shield - Greater Intellect
-				[60663] = 60,	-- Enchant Cloak - Major Agility
-				[60668] = 60,	-- Enchant Gloves - Crusher
-				[60691] = 60,	-- Enchant 2H Weapon - Massacre
-				[60692] = 60,	-- Enchant Chest - Powerful Stats
-				[60707] = 60,	-- Enchant Weapon - Superior Potency
-				[60714] = 60,	-- Enchant Weapon - Mighty Spellpower
-				[60763] = 60,	-- Enchant Boots - Greater Assault
-				[60767] = 60,	-- Enchant Bracers - Superior Spellpower
-				[62256] = 60,	-- Enchant Bracers - Major Stamina
-				[62257] = 60,	-- Enchant Weapon - Titanguard
-				[62948] = 60,	-- Enchant Staff - Greater Spellpower
-				[62959] = 60,	-- Enchant Staff - Spellpower
-				[64441] = 60,	-- Enchant Weapon - Blade Ward
-				[64579] = 60,	-- Enchant Weapon - Blood Draining
-			}
-		end
 		local _, _, ench_str = string.find(GetTradeSkillRecipeLink(skill_idx), "^|%x+|H(.+)|h%[.+%]")
 		local _, ench_num = string.split(":", ench_str)
-		local ench_level = EnchantLevel[tonumber(ench_num)]
+		local ench_level = EnchantLevels[tonumber(ench_num)]
 
 		if ench_level and ench_level > level then
 			return
@@ -505,84 +371,44 @@ do
 		["medium"]	= "|cffffff00",
 		["optimal"]	= "|cffff8040",
 	}
-	local DISENCHANT_LINK = GetSpellLink(13262)
 
-	local CANNOT_DE = {
-		[11287] = true,	-- Lesser Magic Wand
-		[11288] = true,	-- Greater Magic Wand
-		[11289] = true,	-- Lesser Mystic Wand
-		[11290] = true,	-- Greater Mystic Wand
-		[12772] = true,	-- Inlaid Thorium Hammer
-		[14812] = true,	-- Warstrike Buckler
-		[18665] = true,	-- The Eye of Shadow
-		[20406] = true,	-- Twilight Cultist Mantle
-		[20407] = true,	-- Twilight Cultist Robe
-		[20408] = true,	-- Twilight Cultist Cowl
-		[21766] = true,	-- Opal Necklace of Impact
-		[29378] = true,	-- Starheart Baton
-		[31336] = true,	-- Blade of Wizardry
-		[32540] = true,	-- Terokk's Might
-		[32541] = true,	-- Terokk's Wisdom
-		[32660] = true,	-- Crystalforged Sword
-		[32662] = true,	-- Flaming Quartz Staff
+	local PROF_MENU_DATA = {
+		[PROF_ENCHANTING]	= {
+			["name"]	= SPELL_DISENCHANT,
+			["icon"]	= select(3, GetSpellInfo(SPELL_DISENCHANT)),
+			["CanPerform"]	= common.CanDisenchant,
+		},
+		[PROF_INSCRIPTION]	= {
+			["name"]	= SPELL_MILLING,
+			["icon"]	= select(3, GetSpellInfo(SPELL_MILLING)),
+			["CanPerform"]	= common.CanMill,
+		},
+		[PROF_JEWELCRAFTING]	= {
+			["name"]	= SPELL_PROSPECTING,
+			["icon"]	= select(3, GetSpellInfo(SPELL_PROSPECTING)),
+			["CanPerform"]	= common.CanProspect,
+		},
 	}
-
-	local function CanDisenchant()
-		local id = select(3, scan_item.link:find("item:(%d+):"))
-
-		if not id or (id and CANNOT_DE[tonumber(id)]) then
-			return false
-		end
-		local type = scan_item.type
-		local quality = scan_item.quality
-
-		if (type == _G.ARMOR or type == _G.ENCHSLOT_WEAPON) and quality > 1 and quality < 5 then
-			return true
-		end
-		return false
-	end
-	local PROSPECTING_LINK = GetSpellLink(31252)
-
-	local CAN_PROSPECT = {
-		[2770]	= true,	-- Copper Ore
-		[2771]	= true,	-- Tin Ore
-		[2772]	= true,	-- Iron Ore
-		[3858]	= true,	-- Mithril Ore
-		[10620]	= true,	-- Thorium Ore
-		[23452]	= true,	-- Adamantite Ore
-		[23424]	= true,	-- Fel Iron Ore
-		[36909]	= true,	-- Cobalt Ore
-		[36910]	= true,	-- Titanium Ore
-		[36912]	= true,	-- Saronite Ore
-	}
-
-	local function CanProspect()
-		local id = select(3, scan_item.link:find("item:(%d+):"))
-
-		if not id or (id and not CAN_PROSPECT[tonumber(id)]) then
-			return false
-		end
-		return true
-	end
 
 	local name_pair = {}
-	local func
 	local ATSW_SkipSlowScan = _G.ATSW_SkipSlowScan
+	local func
 
-	function Scan(prof, item, level, single)
+	function Scan(prof, level, single)
 		CastSpellByName(prof)
 
 		if ATSW_SkipSlowScan then
 			ATSW_SkipSlowScan()
 		end
-		func = IterTrade
 
 		if prof == PROF_ENCHANTING then
-			if (EquipSlot[item.eqloc]
-			    or (string.find(item.name, L["Armor Vellum"])
-				or string.find(item.name, L["Weapon Vellum"]))) then
+			if (EquipSlot[cur_item.eqloc]
+			    or (string.find(cur_item.name, L["Armor Vellum"])
+				or string.find(cur_item.name, L["Weapon Vellum"]))) then
 				func = IterEnchant
 			end
+		else
+			func = IterTrade
 		end
 
 		-- Expand all headers for an accurate reading.
@@ -600,166 +426,32 @@ do
 			if skill_name and skill_type ~= "header" then
 				name_pair.normal = skill_name
 				name_pair.color = DIFFICULTY_COLORS[skill_type]..skill_name.."|r"
-				func(prof, idx, item, name_pair, num_avail, level, single)
+				func(prof, idx, name_pair, num_avail, level, single)
+				Debug("Scan()", prof, idx, skill_name, num_avail, level, tostring(single))
 			end
 		end
 		CloseTradeSkill()
 
-		if prof == PROF_ENCHANTING and CanDisenchant() then
+		local menu_data = PROF_MENU_DATA[prof]
+
+		if menu_data and menu_data.CanPerform() then
 			local entry = AcquireTable()
 
-			entry.name = SPELL_DISENCHANT
-			entry.text = "|T"..DISENCHANT_ICON..":24:24|t".." "..SPELL_DISENCHANT
+			entry.name = menu_data.name
+			entry.text = string.format("|T%s:24:24|t %s", menu_data.icon, menu_data.name)
 			entry.hasArrow = false
-			entry.tooltipTitle = "RevelationItemLink"
-			entry.tooltipText = DISENCHANT_LINK
-			entry.notCheckable = true
-			table.insert(recipes, entry)
-		elseif prof == PROF_JEWELCRAFTING and CanProspect() then
-			local entry = AcquireTable()
-
-			entry.name = SPELL_PROSPECTING
-			entry.text = "|T"..PROSPECTING_ICON..":24:24|t".." "..SPELL_PROSPECTING
-			entry.hasArrow = false
-			entry.tooltipTitle = "RevelationItemLink"
-			entry.tooltipText = PROSPECTING_LINK
 			entry.notCheckable = true
 			table.insert(recipes, entry)
 		end
 	end
 end	-- do
-
--------------------------------------------------------------------------------
--- Main AddOn functions
--------------------------------------------------------------------------------
-do
-	local options_frame = _G.InterfaceOptionsFrame
-
-	function Revelation:OnInitialize()
-		local LDBinfo = {
-			type = "launcher",
-			icon = "Interface\\Icons\\Spell_Fire_SealOfFire",
-			label = ADDON_NAME,
-			OnClick = function(button)
-					  if options_frame:IsVisible() then
-						  options_frame:Hide()
-					  else
-						  _G.InterfaceOptionsFrame_OpenToCategory(Revelation.optionsFrame)
-					  end
-				  end
-		}
-		self.DataObj = LibStub("LibDataBroker-1.1"):NewDataObject(ADDON_NAME, LDBinfo)
-		self.db = LibStub("AceDB-3.0"):New(ADDON_NAME.."Config", defaults)
-		self.db.RegisterCallback(self, "OnProfileChanged", "OnProfileChanged")
-		self.db.RegisterCallback(self, "OnProfileCopied", "OnProfileChanged")
-		self.db.RegisterCallback(self, "OnProfileReset", "OnProfileChanged")
-		db = self.db.profile
-
-		self:SetupOptions()
-	end
-end	-- do
-
-local function NameSort(one, two)
-	return one.name < two.name
-end
-
-function Revelation:OnEnable()
-	-------------------------------------------------------------------------------
-	-- Create the dropdown frame, and set its state.
-	-------------------------------------------------------------------------------
-	DropDown = CreateFrame("Frame", "Revelation_DropDown")
-	DropDown.displayMode = "MENU"
-	DropDown.point = "TOPLEFT"
-	DropDown.relativePoint = "TOPRIGHT"
-	DropDown.levelAdjust = 0
-	DropDown.initialize =
-		function(self, level)
-			if not level then
-				return
-			end
-			local info
-
-			if level == 1 then
-				local list_frame = _G["DropDownList1"]
-				local list_name = list_frame:GetName()
-				local count = 1
-
-				table.sort(recipes, NameSort)
-
-				for k, v in ipairs(recipes) do
-					info = v
-					info.value = k
-					UIDropDownMenu_AddButton(info, level)
-
-					if v.name == SPELL_DISENCHANT then
-						local button = _G[list_name.."Button"..count]
-
-						dis_frame:SetParent(button)
-						dis_frame:SetPoint("TOPLEFT", button, "TOPLEFT")
-						dis_frame:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT")
-						dis_frame:SetAttribute("macrotext", string.format("/cast %s\n/use %s %s", SPELL_DISENCHANT, bag_id, slot_id))
-						dis_frame:Show()
-					elseif v.name == SPELL_PROSPECTING then
-						local button = _G[list_name.."Button"..count]
-
-						dis_frame:SetParent(button)
-						dis_frame:SetPoint("TOPLEFT", button, "TOPLEFT")
-						dis_frame:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT")
-						dis_frame:SetAttribute("macrotext", string.format("/cast %s\n/use %s %s", SPELL_PROSPECTING, bag_id, slot_id))
-						dis_frame:Show()
-					end
-					count = count + 1
-				end
-			elseif level == 2 then
-				local sub_menu = recipes[UIDROPDOWNMENU_MENU_VALUE].subMenu
-
-				if sub_menu then
-					for key, val in ipairs(sub_menu) do
-						info = val
-						UIDropDownMenu_AddButton(info, level)
-					end
-				end
-			end
-		end
-
-	-----------------------------------------------------------------------
-	-- Static popup initialization
-	-----------------------------------------------------------------------
-	StaticPopupDialogs["Revelation_CraftItems"] = {
-		button1 = OKAY,
-		button2 = CANCEL,
-		OnAccept = OnCraftItems,
-		EditBoxOnEnterPressed = OnCraftItems,
-		EditBoxOnEscapePressed = function(self)
-						 self:GetParent():Hide()
-					 end,
-		timeout = 0,
-		hideOnEscape = 1,
-		exclusive = 1,
-		whileDead = 1,
-		hasEditBox = 1
-	}
-
-	-------------------------------------------------------------------------------
-	-- Create our hooks.
-	-------------------------------------------------------------------------------
-	self:RawHook("PaperDollItemSlotButton_OnModifiedClick", true)
-	self:RawHook("ContainerFrameItemButton_OnModifiedClick", true)
-	self:RawHook("HandleModifiedItemClick", true)
-end
-
-function Revelation:OnDisable()
-	self:UnhookAll()
-end
-
-function Revelation:OnProfileChanged(event, database, newProfileKey)
-	db = database.profile
-end
 
 do
 	local EMPTY_RECIPE = {
 		text = L["Either no recipe or no reagents were found."],
-		func = function() CloseDropDownMenus() end,
+		func = function()
+			       CloseDropDownMenus()
+		       end,
 		hasArrow = false,
 		notCheckable = true
 	}
@@ -801,39 +493,41 @@ do
 			end
 		end
 
-		local item_name, item_link, item_quality, item_level, item_minlevel, item_type, item_stype, _, item_eqloc, _ = GetItemInfo(item_link)
+		local item_name, item_link, item_quality, item_level, item_minlevel, item_type, item_subtype, item_stack, item_eqloc, _ = GetItemInfo(item_link)
 
-		scan_item.name = item_name
-		scan_item.link = item_link
-		scan_item.quality = item_quality
-		scan_item.level = item_level
-		scan_item.minlevel = item_minlevel
-		scan_item.type = item_type
-		scan_item.stype = item_stype
-		scan_item.eqloc = item_eqloc
+		cur_item.name = item_name
+		cur_item.link = item_link
+		cur_item.quality = item_quality
+		cur_item.level = item_level
+		cur_item.minlevel = item_minlevel
+		cur_item.type = item_type
+		cur_item.subtype = item_subtype
+		cur_item.stack = item_stack
+		cur_item.eqloc = item_eqloc
 
-		Debug("Item type", item_type, "Item subtype", item_stype)
+		Debug("Item type", item_type, "Item subtype", item_subtype)
 
 		if item_type == _G.ARMOR or string.find(item_type, L["Weapon"]) then
 			if known_professions[PROF_ENCHANTING] then
-				Scan(PROF_ENCHANTING, scan_item, item_level, true)
+				Scan(PROF_ENCHANTING, item_level, true)
 			end
 
 			if known_professions[PROF_INSCRIPTION] then
-				Scan(PROF_INSCRIPTION, scan_item, item_level, true)
+				Scan(PROF_INSCRIPTION, item_level, true)
 			end
 
 			if known_professions[PROF_RUNEFORGING] then
-				Scan(PROF_RUNEFORGING, scan_item, item_level, true)
+				Scan(PROF_RUNEFORGING, item_level, true)
 			end
-		elseif item_type == L["Trade Goods"] and (item_stype == L["Armor Enchantment"] or item_stype == L["Weapon Enchantment"]) then
+		elseif item_type == L["Trade Goods"] and (item_subtype == L["Armor Enchantment"] or item_subtype == L["Weapon Enchantment"]) then
 			if known_professions[PROF_ENCHANTING] then
-				Scan(PROF_ENCHANTING, scan_item, max(1, item_level - 5), true)	-- Vellum item levels are 5 higher than the enchant which can be put on them.
+				-- Vellum item levels are 5 higher than the enchant which can be put on them.
+				Scan(PROF_ENCHANTING, max(1, item_level - 5), true)
 			end
 		else
 			for prof, known in pairs(known_professions) do
 				if known then
-					Scan(prof, scan_item, 1, false)
+					Scan(prof, 1, false)
 				end
 			end
 		end
@@ -843,6 +537,128 @@ do
 		end
 		ToggleDropDownMenu(1, nil, DropDown, anchor, 0, 0)
 	end
+end
+
+-------------------------------------------------------------------------------
+-- Initialization functions.
+-------------------------------------------------------------------------------
+do
+	local options_frame = _G.InterfaceOptionsFrame
+
+	function Revelation:OnInitialize()
+		local LDBinfo = {
+			type = "launcher",
+			icon = "Interface\\Icons\\Spell_Fire_SealOfFire",
+			label = ADDON_NAME,
+			OnClick = function(button)
+					  if options_frame:IsVisible() then
+						  options_frame:Hide()
+					  else
+						  _G.InterfaceOptionsFrame_OpenToCategory(Revelation.optionsFrame)
+					  end
+				  end
+		}
+		self.DataObj = LibStub("LibDataBroker-1.1"):NewDataObject(ADDON_NAME, LDBinfo)
+		self.db = LibStub("AceDB-3.0"):New(ADDON_NAME.."Config", defaults)
+		db = self.db.profile
+
+		self:SetupOptions()
+	end
+end	-- do
+
+do
+	local SPECIAL_MENU_ENTRY = {
+		[SPELL_DISENCHANT]	= GetSpellLink(13262),
+		[SPELL_MILLING]		= GetSpellLink(51005),
+		[SPELL_PROSPECTING]	= GetSpellLink(31252),
+	}
+
+	local function NameSort(one, two)
+		return one.name < two.name
+	end
+
+	function Revelation:OnEnable()
+		-------------------------------------------------------------------------------
+		-- Create the dropdown frame, and set its state.
+		-------------------------------------------------------------------------------
+		DropDown = CreateFrame("Frame", "Revelation_DropDown")
+		DropDown.displayMode = "MENU"
+		DropDown.point = "TOPLEFT"
+		DropDown.relativePoint = "TOPRIGHT"
+		DropDown.levelAdjust = 0
+		DropDown.initialize =
+			function(self, level)
+				if not level then
+					return
+				end
+				local info
+
+				if level == 1 then
+					local list_frame = _G["DropDownList1"]
+					local list_name = list_frame:GetName()
+					local count = 1
+
+					table.sort(recipes, NameSort)
+
+					for k, v in ipairs(recipes) do
+						info = v
+						info.value = k
+						UIDropDownMenu_AddButton(info, level)
+
+						if SPECIAL_MENU_ENTRY[v.name] then
+							local button = _G[list_name.."Button"..count]
+
+							secure_frame:SetParent(button)
+							secure_frame:SetPoint("TOPLEFT", button, "TOPLEFT")
+							secure_frame:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT")
+							secure_frame:SetAttribute("macrotext", string.format("/cast %s\n/use %s %s\n/script CloseDropDownMenus()", v.name, common.bag_id, common.slot_id))
+							secure_frame.link = SPECIAL_MENU_ENTRY[v.name]
+							secure_frame:Show()
+						end
+						count = count + 1
+					end
+				elseif level == 2 then
+					local sub_menu = recipes[UIDROPDOWNMENU_MENU_VALUE].subMenu
+
+					if sub_menu then
+						for key, val in ipairs(sub_menu) do
+							info = val
+							UIDropDownMenu_AddButton(info, level)
+						end
+					end
+				end
+			end
+
+		-----------------------------------------------------------------------
+		-- Static popup initialization
+		-----------------------------------------------------------------------
+		StaticPopupDialogs["Revelation_CraftItems"] = {
+			button1 = OKAY,
+			button2 = CANCEL,
+			OnAccept = OnCraftItems,
+			EditBoxOnEnterPressed = OnCraftItems,
+			EditBoxOnEscapePressed = function(self)
+							 self:GetParent():Hide()
+						 end,
+			timeout = 0,
+			hideOnEscape = 1,
+			exclusive = 1,
+			whileDead = 1,
+			hasEditBox = 1
+		}
+
+		-------------------------------------------------------------------------------
+		-- Create our hooks.
+		-------------------------------------------------------------------------------
+		self:RawHook("PaperDollItemSlotButton_OnModifiedClick", true)
+		self:RawHook("ContainerFrameItemButton_OnModifiedClick", true)
+		self:RawHook("HandleModifiedItemClick", true)
+		self:SecureHook("CloseDropDownMenus")
+	end
+end	-- do block
+
+function Revelation:OnDisable()
+	self:UnhookAll()
 end
 
 -------------------------------------------------------------------------------
@@ -859,12 +675,12 @@ do
 		local hooked_self, button = ...
 
 		click_handled = true
-		bag_id = nil
-		slot_id = nil
+		common.bag_id = nil
+		common.slot_id = nil
 
 		if ModifiersPressed() and button == MouseButton[db.button] then
-			slot_id = hooked_self:GetID()
-			self:CreateMenu(hooked_self, GetInventoryItemLink("player", slot_id))
+			common.slot_id = hooked_self:GetID()
+			self:CreateMenu(hooked_self, GetInventoryItemLink("player", common.slot_id))
 		else
 			self.hooks.PaperDollItemSlotButton_OnModifiedClick(...)
 		end
@@ -875,13 +691,13 @@ do
 		local hooked_self, button = ...
 
 		click_handled = true
-		bag_id = nil
-		slot_id = nil
+		common.bag_id = nil
+		common.slot_id = nil
 
 		if ModifiersPressed() and button == MouseButton[db.button] then
-			bag_id = hooked_self:GetParent():GetID()
-			slot_id = hooked_self:GetID()
-			self:CreateMenu(hooked_self, GetContainerItemLink(bag_id, slot_id))
+			common.bag_id = hooked_self:GetParent():GetID()
+			common.slot_id = hooked_self:GetID()
+			self:CreateMenu(hooked_self, GetContainerItemLink(common.bag_id, common.slot_id))
 		end
 		self.hooks.ContainerFrameItemButton_OnModifiedClick(...)
 		click_handled = false
@@ -897,6 +713,17 @@ do
 	end
 end
 _G["TradeRecipientItem7ItemButton"]:RegisterForClicks("AnyUp")
+
+function Revelation:CloseDropDownMenus(...)
+	local parent = secure_frame:GetParent()
+
+	if parent and not parent:IsVisible() then
+		secure_frame:SetParent(nil)
+		secure_frame:ClearAllPoints()
+		secure_frame:Hide()
+		secure_frame.link = nil
+	end
+end
 
 -- Voodoo for UIDropDownMenu tooltips - thanks to Xinhuan for pointing out that not everything must be complex.
 hooksecurefunc("GameTooltip_AddNewbieTip",

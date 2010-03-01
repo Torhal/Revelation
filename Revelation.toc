@@ -7,7 +7,7 @@
 ## X-Email: torhal-wow@googlegroups.com
 ## X-Category: Professions
 ## X-Credits: Translations by Vastilia (French), erwinmeier (German), yondrin (Russian), wowuicn (Simplified Chinese), yllelder (Spanish), acatzlu (Traditional Chinese).
-## OptionalDeps: Ace3, Ara_Broker_Tradeskills
+## OptionalDeps: Ace3, tekDebug
 ## SavedVariables: RevelationConfig
 
 ## LoadManagers: AddonLoader
@@ -29,4 +29,7 @@ Localization\ruRU.lua
 Localization\zhCN.lua
 Localization\zhTW.lua
 
+Enchanting.lua
+Inscription.lua
+Jewelcrafting.lua
 Revelation.lua
