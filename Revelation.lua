@@ -101,7 +101,7 @@ local EquipSlot = {
 	["INVTYPE_CLOAK"]		= L["Cloak"],
 	["INVTYPE_WEAPON"]		= L["Weapon"],
 	["INVTYPE_SHIELD"]		= L["Shield"],
-	["INVTYPE_2HWEAPON"]		= L["2H Weapon"],
+	["INVTYPE_2HWEAPON"]		= _G.ENCHSLOT_2HWEAPON,
 	["INVTYPE_WEAPONMAINHAND"]	= L["Weapon"],
 	["INVTYPE_WEAPONOFFHAND"]	= L["Weapon"]
 }
@@ -246,7 +246,7 @@ do
 			entry.func = CraftItem
 			entry.arg1 = craft_args
 			entry.tooltipTitle = "RevelationTooltip"
-			entry.tooltipText = L["Create every"].." "..normal_name.." "..L["you have reagents for."]
+			entry.tooltipText = string.format(L["Create every %s you have reagents for."], normal_name)
 			entry.notCheckable = true
 			table.insert(sub_menu, entry)
 
@@ -255,7 +255,7 @@ do
 			entry2.func = CraftItem_Popup
 			entry2.arg1 = craft_args
 			entry2.tooltipTitle = "RevelationTooltip"
-			entry2.tooltipText = L["Create"].." 1 - "..num_avail.." "..normal_name.."."
+			entry2.tooltipText = string.format(L["Create 1 - %d %s."], num_avail, normal_name)
 			entry2.notCheckable = true
 			table.insert(sub_menu, entry2)
 		end

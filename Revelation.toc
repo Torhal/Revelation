@@ -19,8 +19,16 @@ embeds.xml
 
 Libs\LibDataBroker-1.1.lua
 
-Localization\deDE.lua
+
+#@non-debug@
 Localization\enUS.lua
+#@end-non-debug@
+
+#@debug@
+Localization\devel-enUS.lua
+#@end-debug@
+
+Localization\deDE.lua
 Localization\esES.lua
 Localization\esMX.lua
 Localization\frFR.lua
