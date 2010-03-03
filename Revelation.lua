@@ -253,7 +253,7 @@ do
 			table.insert(sub_menu, entry)
 
 			local entry2 = AcquireTable()
-			entry2.text = " 1 - "..num_avail
+			entry2.text = string.format(" 1 - %d", num_avail)
 			entry2.func = CraftItem_Popup
 			entry2.arg1 = craft_args
 			entry2.tooltipTitle = "RevelationTooltip"
@@ -269,7 +269,7 @@ do
 
 		local new_recipe = AcquireTable()
 		new_recipe.name = normal_name
-		new_recipe.text = "|T"..icon_cache[normal_name]..":24:24|t".."  "..skill_name.color.." ("..num_avail..")"
+		new_recipe.text = string.format("|T%s:24:24|t %s (%d)", icon_cache[normal_name], skill_name.color, num_avail)
 		new_recipe.func = CraftItem
 		new_recipe.arg1 = string.format("%s:%d:1", prof, skill_idx)
 		new_recipe.hasArrow = has_arrow
@@ -345,7 +345,10 @@ do
 				found = true
 			end
 		elseif cur_item.eqloc == "INVTYPE_2HWEAPON" then
-			if string.find(normal_name, eqref) or string.find(normal_name, EquipSlot["INVTYPE_WEAPON"]) or (cur_item.subtype == L["Staves"] and string.find(normal_name, L["Staff"])) then
+			if string.find(normal_name, eqref)
+			   or string.find(normal_name, EquipSlot["INVTYPE_WEAPON"])
+			   or (cur_item.subtype == L["Staves"]
+		               and string.find(normal_name, L["Staff"])) then
 				found = true
 			end
 		elseif string.find(normal_name, eqref) then
@@ -579,6 +582,7 @@ do
 		db = self.db.global
 
 		self:SetupOptions()
+		self.OnInitialize = nil
 	end
 end	-- do
 
