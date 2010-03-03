@@ -115,6 +115,18 @@ local DIFFICULTY_COLORS = {
 	["optimal"]	= "|cffff8040",
 }
 
+-------------------------------------------------------------------------------
+-- Variables.
+-------------------------------------------------------------------------------
+common.cur_item = {}
+
+local cur_item = common.cur_item
+local recipes = {}
+local table_heap = {}
+local active_tables = {}
+local db
+local DropDown
+
 local known_professions = {
 	[GetSpellInfo(2259)]	= false, -- Alchemy
 	[GetSpellInfo(2018)]	= false, -- Blacksmithing
@@ -129,26 +141,6 @@ local known_professions = {
 	[PROF_INSCRIPTION]	= false, -- Inscription
 	[PROF_RUNEFORGING]	= false, -- Runeforging
 }
-
-local defaults = {
-	global = {
-		modifier = 1,	-- ALT
-		modifier2 = 10,	-- NONE
-		button = 2	-- RightButton
-	}
-}
-
--------------------------------------------------------------------------------
--- Variables.
--------------------------------------------------------------------------------
-common.cur_item = {}
-
-local cur_item = common.cur_item
-local recipes = {}
-local table_heap = {}
-local active_tables = {}
-local db
-local DropDown
 
 -------------------------------------------------------------------------------
 -- Local functions
@@ -312,14 +304,20 @@ end
 
 local IterEnchant
 do
-	local EnchantLevels
-
 	local ArmorEnch = {
-		L["Chest"], L["Boots"], L["Bracer"], L["Gloves"], L["Ring"], L["Cloak"], L["Shield"]
+		L["Chest"],
+		L["Boots"],
+		L["Bracer"],
+		L["Gloves"],
+		L["Ring"],
+		L["Cloak"],
+		L["Shield"]
 	}
 
 	local WeaponEnch = {
-		L["Staff"], _G.ENCHSLOT_2HWEAPON, _G.ENCHSLOT_WEAPON
+		L["Staff"],
+		_G.ENCHSLOT_2HWEAPON,
+		_G.ENCHSLOT_WEAPON
 	}
 
 	function IterEnchant(prof, skill_idx, skill_name, num_avail, level, single)
@@ -397,6 +395,13 @@ do
 		},
 	}
 
+	local DIFFICULTY_IDS = {
+		["trivial"]	= 1,
+		["easy"]	= 2,
+		["medium"]	= 3,
+		["optimal"]	= 4,
+	}
+
 	local name_pair = {}
 	local ATSW_SkipSlowScan = _G.ATSW_SkipSlowScan
 	local func
@@ -430,7 +435,7 @@ do
 		for idx = 1, GetNumTradeSkills() do
 			local skill_name, skill_type, num_avail, _, _ = GetTradeSkillInfo(idx)
 
-			if skill_name and skill_type ~= "header" then
+			if skill_name and skill_type ~= "header" and DIFFICULTY_IDS[skill_type] >= db.min_skill and DIFFICULTY_IDS[skill_type] <= db.max_skill then
 				name_pair.normal = skill_name
 				name_pair.color = DIFFICULTY_COLORS[skill_type]..skill_name.."|r"
 				func(prof, idx, name_pair, num_avail, level, single)
@@ -577,7 +582,17 @@ do
 				  end
 		}
 		self.DataObj = LibStub("LibDataBroker-1.1"):NewDataObject(ADDON_NAME, LDBinfo)
-		self.db = LibStub("AceDB-3.0"):New(ADDON_NAME.."Config", defaults)
+
+		local defaults = {
+			global = {
+				modifier	= 1,		-- ALT
+				modifier2	= 10,		-- NONE
+				button		= 2,		-- RightButton
+				min_skill	= 1,		-- Trivial
+				max_skill	= 4,		-- Optimal
+			}
+		}
+		self.db = LibStub("AceDB-3.0"):New(ADDON_NAME.."Config", defaults, true)
 		db = self.db.global
 
 		self:SetupOptions()
@@ -763,6 +778,13 @@ hooksecurefunc("GameTooltip_AddNewbieTip",
 -------------------------------------------------------------------------------
 local options, GetOptions
 do
+	local DifficultyName = {
+		[1]	= DIFFICULTY_COLORS["trivial"]..L["Trivial"].."|r",
+		[2]	= DIFFICULTY_COLORS["easy"]..L["Easy"].."|r",
+		[3]	= DIFFICULTY_COLORS["medium"]..L["Medium"].."|r",
+		[4]	= DIFFICULTY_COLORS["optimal"]..L["Optimal"].."|r",
+	}
+
 	local ModifierName = {
 		[1]	= _G.ALT_KEY,
 		[2]	= _G.CTRL_KEY,
@@ -787,32 +809,76 @@ do
 				name = ADDON_NAME,
 				args = {
 					modifier = {
-						order = 1,
-						type = "select",
-						name = _G.KEY1,
-						desc = L["Select the key to press when mouse-clicking for menu display."],
-						get = function() return db.modifier end,
-						set = function(info, value) db.modifier = value end,
-						values = ModifierName
+						order	= 1,
+						type	= "select",
+						name	= _G.KEY1,
+						desc	= L["Select the key to press when mouse-clicking for menu display."],
+						get	= function()
+								  return db.modifier
+							  end,
+						set	= function(info, value)
+								  db.modifier = value
+							  end,
+						values	= ModifierName
 					},
 					modifier2 = {
-						order = 2,
-						type = "select",
-						name = _G.KEY2,
-						desc = L["Select the second key to press when mouse-clicking for menu display."],
-						get = function() return db.modifier2 end,
-						set = function(info, value) db.modifier2 = value end,
-						values = ModifierName
+						order	= 2,
+						type	= "select",
+						name	= _G.KEY2,
+						desc	= L["Select the second key to press when mouse-clicking for menu display."],
+						get	= function()
+								  return db.modifier2
+							  end,
+						set	= function(info, value)
+								  db.modifier2 = value
+							  end,
+						values	= ModifierName
 					},
 					button = {
-						order = 3,
-						type = "select",
-						name = _G.MOUSE_LABEL,
-						desc = L["Select the mouse button to click for menu display."],
-						get = function() return db.button end,
-						set = function(info, value) db.button = value end,
-						values = ButtonName
-					}
+						order	= 3,
+						type	= "select",
+						name	= _G.MOUSE_LABEL,
+						desc	= L["Select the mouse button to click for menu display."],
+						get	= function()
+								  return db.button
+							  end,
+						set	= function(info, value)
+								  db.button = value
+							  end,
+						values	= ButtonName
+					},
+					min_skill = {
+						order	= 4,
+						type	= "select",
+						name	= string.format("%s (%s)", _G.SKILL_LEVEL, _G.MINIMUM),
+						get	= function()
+								  return db.min_skill
+							  end,
+						set	= function(info, value)
+								  db.min_skill = value
+
+								  if value > db.max_skill then
+									  db.min_skill = db.max_skill
+								  end
+							  end,
+						values	= DifficultyName
+					},
+					max_skill = {
+						order	= 5,
+						type	= "select",
+						name	= string.format("%s (%s)", _G.SKILL_LEVEL, _G.MAXIMUM),
+						get	= function()
+								  return db.max_skill
+							  end,
+						set	= function(info, value)
+								  db.max_skill = value
+
+								  if value < db.min_skill then
+									  db.max_skill = db.min_skill
+								  end
+							  end,
+						values	= DifficultyName
+					},
 				}
 			}
 		end
