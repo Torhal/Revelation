@@ -108,6 +108,13 @@ local EquipSlot = {
 	["INVTYPE_WEAPONOFFHAND"]	= L["Weapon"]
 }
 
+local DIFFICULTY_COLORS = {
+	["trivial"]	= "|cff808080",
+	["easy"]	= "|cff40bf40",
+	["medium"]	= "|cffffff00",
+	["optimal"]	= "|cffff8040",
+}
+
 local known_professions = {
 	[GetSpellInfo(2259)]	= false, -- Alchemy
 	[GetSpellInfo(2018)]	= false, -- Blacksmithing
@@ -372,13 +379,6 @@ end
 
 local Scan
 do
-	local DIFFICULTY_COLORS = {
-		["trivial"]	= "|cff808080",
-		["easy"]	= "|cff40bf40",
-		["medium"]	= "|cffffff00",
-		["optimal"]	= "|cffff8040",
-	}
-
 	local PROF_MENU_DATA = {
 		[PROF_ENCHANTING]	= {
 			["name"]	= SPELL_DISENCHANT,
