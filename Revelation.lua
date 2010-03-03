@@ -358,10 +358,9 @@ do
 		if not found then
 			return
 		end
-		EnchantLevels = common.GetEnchantLevels()
-
 		local _, _, ench_str = string.find(GetTradeSkillRecipeLink(skill_idx), "^|%x+|H(.+)|h%[.+%]")
 		local _, ench_num = string.split(":", ench_str)
+		local EnchantLevels = common.GetEnchantLevels()
 		local ench_level = EnchantLevels[tonumber(ench_num)]
 
 		if ench_level and ench_level > level then
