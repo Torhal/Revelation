@@ -7,31 +7,8 @@ local ADDON_NAME, common = ...
 -------------------------------------------------------------------------------
 -- Constants
 -------------------------------------------------------------------------------
+local CANNOT_DE
 local ENCHANT_LEVELS
-
-local CANNOT_DE = {
-	[11287] = true,	-- Lesser Magic Wand
-	[11288] = true,	-- Greater Magic Wand
-	[11289] = true,	-- Lesser Mystic Wand
-	[11290] = true,	-- Greater Mystic Wand
-	[12772] = true,	-- Inlaid Thorium Hammer
-	[14812] = true,	-- Warstrike Buckler
-	[18665] = true,	-- The Eye of Shadow
-	[20406] = true,	-- Twilight Cultist Mantle
-	[20407] = true,	-- Twilight Cultist Robe
-	[20408] = true,	-- Twilight Cultist Cowl
-	[21766] = true,	-- Opal Necklace of Impact
-	[29378] = true,	-- Starheart Baton
-	[31336] = true,	-- Blade of Wizardry
-	[32540] = true,	-- Terokk's Might
-	[32541] = true,	-- Terokk's Wisdom
-	[32660] = true,	-- Crystalforged Sword
-	[32662] = true,	-- Flaming Quartz Staff
-}
-
--------------------------------------------------------------------------------
--- Variables.
--------------------------------------------------------------------------------
 
 -------------------------------------------------------------------------------
 -- Functions.
@@ -39,6 +16,28 @@ local CANNOT_DE = {
 function common.CanDisenchant()
 	local cur_item = common.cur_item
 	local id = select(3, cur_item.link:find("item:(%d+):"))
+
+	if not CANNOT_DE then
+		CANNOT_DE = {
+			[11287] = true,	-- Lesser Magic Wand
+			[11288] = true,	-- Greater Magic Wand
+			[11289] = true,	-- Lesser Mystic Wand
+			[11290] = true,	-- Greater Mystic Wand
+			[12772] = true,	-- Inlaid Thorium Hammer
+			[14812] = true,	-- Warstrike Buckler
+			[18665] = true,	-- The Eye of Shadow
+			[20406] = true,	-- Twilight Cultist Mantle
+			[20407] = true,	-- Twilight Cultist Robe
+			[20408] = true,	-- Twilight Cultist Cowl
+			[21766] = true,	-- Opal Necklace of Impact
+			[29378] = true,	-- Starheart Baton
+			[31336] = true,	-- Blade of Wizardry
+			[32540] = true,	-- Terokk's Might
+			[32541] = true,	-- Terokk's Wisdom
+			[32660] = true,	-- Crystalforged Sword
+			[32662] = true,	-- Flaming Quartz Staff
+		}
+	end
 
 	if not id or (id and CANNOT_DE[tonumber(id)]) then
 		return false
