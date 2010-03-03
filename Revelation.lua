@@ -79,6 +79,8 @@ secure_frame:Hide()
 -------------------------------------------------------------------------------
 -- Constants
 -------------------------------------------------------------------------------
+local MY_CLASS			= select(2, UnitClass("player"))
+
 local PROF_ENCHANTING		= GetSpellInfo(7411)
 local PROF_INSCRIPTION		= GetSpellInfo(45357)
 local PROF_JEWELCRAFTING	= GetSpellInfo(25229)
@@ -529,7 +531,7 @@ do
 				-- Vellum item levels are 5 higher than the enchant which can be put on them.
 				Scan(PROF_ENCHANTING, max(1, item_level - 5), true)
 			end
-		elseif common.CanPick() then
+		elseif MY_CLASS == "ROGUE" and common.CanPick() then
 			local entry = AcquireTable()
 
 			entry.name = SPELL_PICK_LOCK
