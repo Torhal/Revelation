@@ -14,7 +14,7 @@ local MILLABLE
 -------------------------------------------------------------------------------
 function common.CanMill()
 	if not MILLABLE then
-		local MILLABLE = {
+		MILLABLE = {
 			[765]	= true,	-- Silverleaf
 			[785]	= true,	-- Mageroyal
 			[2447]	= true,	-- Peacebloom

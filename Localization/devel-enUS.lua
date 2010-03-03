@@ -26,3 +26,10 @@ L["Trade Goods"] = true
 L["Weapon"] = true
 L["Weapon Enchantment"] = true
 L["Weapon Vellum"] = true
+
+
+-- Tradeskill difficulty levels.
+L["Trivial"] = true
+L["Easy"] = true
+L["Medium"] = true
+L["Optimal"] = true
