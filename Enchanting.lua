@@ -7,7 +7,7 @@ local ADDON_NAME, common = ...
 -------------------------------------------------------------------------------
 -- Constants
 -------------------------------------------------------------------------------
-local EnchantLevels
+local ENCHANT_LEVELS
 
 local CANNOT_DE = {
 	[11287] = true,	-- Lesser Magic Wand
@@ -54,8 +54,8 @@ end
 
 
 function common.GetEnchantLevels()
-	if not EnchantLevels then
-		EnchantLevels = {
+	if not ENCHANT_LEVELS then
+		ENCHANT_LEVELS = {
 			[25086] = 35,	-- Enchant Cloak - Dodge
 			[27899] = 35,	-- Enchant Bracer - Brawn
 			[27905] = 35,	-- Enchant Bracer - Stats
@@ -190,5 +190,5 @@ function common.GetEnchantLevels()
 			[64579] = 60,	-- Enchant Weapon - Blood Draining
 		}
 	end
-	return EnchantLevels
+	return ENCHANT_LEVELS
 end
