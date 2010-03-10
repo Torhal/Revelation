@@ -404,14 +404,9 @@ do
 
 	local name_pair = {}
 	local ATSW_SkipSlowScan = _G.ATSW_SkipSlowScan
-	local func
 
 	function Scan(prof, level, single)
-		CastSpellByName(prof)
-
-		if ATSW_SkipSlowScan then
-			ATSW_SkipSlowScan()
-		end
+		local func
 
 		if prof == PROF_ENCHANTING then
 			if (EquipSlot[cur_item.eqloc]
@@ -423,26 +418,34 @@ do
 			func = IterTrade
 		end
 
-		-- Expand all headers for an accurate reading.
-		for i = GetNumTradeSkills(), 1, -1 do
-			local _, skill_type = GetTradeSkillInfo(i)
+		if func then
+			CastSpellByName(prof)
 
-			if skill_type == "header" then
-				ExpandTradeSkillSubClass(i)
+			if ATSW_SkipSlowScan then
+				ATSW_SkipSlowScan()
 			end
-		end
 
-		for idx = 1, GetNumTradeSkills() do
-			local skill_name, skill_type, num_avail, _, _ = GetTradeSkillInfo(idx)
+			-- Expand all headers for an accurate reading.
+			for i = GetNumTradeSkills(), 1, -1 do
+				local _, skill_type = GetTradeSkillInfo(i)
 
-			if skill_name and skill_type ~= "header" and DIFFICULTY_IDS[skill_type] >= db.min_skill and DIFFICULTY_IDS[skill_type] <= db.max_skill then
-				name_pair.normal = skill_name
-				name_pair.color = DIFFICULTY_COLORS[skill_type]..skill_name.."|r"
-				func(prof, idx, name_pair, num_avail, level, single)
-				Debug("Scan()", prof, idx, skill_name, num_avail, level, tostring(single))
+				if skill_type == "header" then
+					ExpandTradeSkillSubClass(i)
+				end
 			end
+
+			for idx = 1, GetNumTradeSkills() do
+				local skill_name, skill_type, num_avail, _, _ = GetTradeSkillInfo(idx)
+
+				if skill_name and skill_type ~= "header" and DIFFICULTY_IDS[skill_type] >= db.min_skill and DIFFICULTY_IDS[skill_type] <= db.max_skill then
+					name_pair.normal = skill_name
+					name_pair.color = DIFFICULTY_COLORS[skill_type]..skill_name.."|r"
+					func(prof, idx, name_pair, num_avail, level, single)
+					Debug("Scan()", prof, idx, skill_name, num_avail, level, tostring(single))
+				end
+			end
+			CloseTradeSkill()
 		end
-		CloseTradeSkill()
 
 		local menu_data = PROF_MENU_DATA[prof]
 
