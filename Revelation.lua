@@ -377,23 +377,7 @@ end
 
 local Scan
 do
-	local PROF_MENU_DATA = {
-		[PROF_ENCHANTING]	= {
-			["name"]	= SPELL_DISENCHANT,
-			["icon"]	= select(3, GetSpellInfo(SPELL_DISENCHANT)),
-			["CanPerform"]	= common.CanDisenchant,
-		},
-		[PROF_INSCRIPTION]	= {
-			["name"]	= SPELL_MILLING,
-			["icon"]	= select(3, GetSpellInfo(SPELL_MILLING)),
-			["CanPerform"]	= common.CanMill,
-		},
-		[PROF_JEWELCRAFTING]	= {
-			["name"]	= SPELL_PROSPECTING,
-			["icon"]	= select(3, GetSpellInfo(SPELL_PROSPECTING)),
-			["CanPerform"]	= common.CanProspect,
-		},
-	}
+	local PROF_MENU_DATA
 
 	local DIFFICULTY_IDS = {
 		["trivial"]	= 1,
@@ -447,6 +431,25 @@ do
 			CloseTradeSkill()
 		end
 
+		if not PROF_MENU_DATA then
+			PROF_MENU_DATA = {
+				[PROF_ENCHANTING]	= {
+					["name"]	= SPELL_DISENCHANT,
+					["icon"]	= select(3, GetSpellInfo(SPELL_DISENCHANT)),
+					["CanPerform"]	= common.CanDisenchant,
+				},
+				[PROF_INSCRIPTION]	= {
+					["name"]	= SPELL_MILLING,
+					["icon"]	= select(3, GetSpellInfo(SPELL_MILLING)),
+					["CanPerform"]	= common.CanMill,
+				},
+				[PROF_JEWELCRAFTING]	= {
+					["name"]	= SPELL_PROSPECTING,
+					["icon"]	= select(3, GetSpellInfo(SPELL_PROSPECTING)),
+					["CanPerform"]	= common.CanProspect,
+				},
+			}
+		end
 		local menu_data = PROF_MENU_DATA[prof]
 
 		if menu_data and menu_data.CanPerform() then
