@@ -91,7 +91,7 @@ local SPELL_MILLING		= GetSpellInfo(51005)
 local SPELL_PROSPECTING		= GetSpellInfo(31252)
 
 local SPELL_PICK_LOCK		= GetSpellInfo(1804)
-local ICON_PICK_LOCK		= select(3, GetSpellInfo(SPELL_PICK_LOCK))
+local ICON_PICK_LOCK
 
 local EquipSlot = {
 	["INVTYPE_CHEST"]		= L["Chest"],
@@ -546,6 +546,8 @@ do
 			end
 		elseif MY_CLASS == "ROGUE" and common.CanPick() then
 			local entry = AcquireTable()
+
+			ICON_PICK_LOCK = ICON_PICK_LOCK or select(3, GetSpellInfo(SPELL_PICK_LOCK))
 
 			entry.name = SPELL_PICK_LOCK
 			entry.text = string.format("|T%s:24:24|t %s", ICON_PICK_LOCK, SPELL_PICK_LOCK)
