@@ -452,7 +452,7 @@ do
 		end
 		local menu_data = PROF_MENU_DATA[prof]
 
-		if menu_data and menu_data.CanPerform() then
+		if common.bag_id and common.slot_id and menu_data and menu_data.CanPerform() then
 			local entry = AcquireTable()
 
 			entry.name = menu_data.name
