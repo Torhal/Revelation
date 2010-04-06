@@ -189,18 +189,19 @@ do
 		CastSpellByName(prof)
 		CloseTradeSkill()
 
-		if (prof == PROF_ENCHANTING or prof == PROF_RUNEFORGING) and cur_item.type ~= L["Trade Goods"] then
-			DoTradeSkill(skill_idx, 1)
+		CloseDropDownMenus()
 
+		if prof == PROF_ENCHANTING and cur_item.type == L["Trade Goods"] and cur_item.subtype ~= L["Armor Enchantment"] and cur_item.subtype ~= L["Weapon Enchantment"] then
+			return
+		end
+
+		if prof == PROF_ENCHANTING or prof == PROF_RUNEFORGING then
 			if common.bag_id and common.slot_id then
 				UseContainerItem(common.bag_id, common.slot_id)
 			elseif common.slot_id then
 				UseInventoryItem(common.slot_id)
 			end
-		else
-			DoTradeSkill(skill_idx, amount)
 		end
-		CloseDropDownMenus()
 	end
 	local craft_data
 
@@ -289,7 +290,6 @@ local function IterTrade(prof, skill_idx, skill_name, num_avail, level, single)
 
 		for reagent = 1, GetTradeSkillNumReagents(skill_idx) do
 			if cur_item.name == GetTradeSkillReagentInfo(skill_idx, reagent) then
-				Debug("IterTrade()", cur_item.name, skill_idx, " - reagent", reagent)
 				is_reagent = true
 				break
 			end
@@ -425,7 +425,6 @@ do
 					name_pair.normal = skill_name
 					name_pair.color = DIFFICULTY_COLORS[skill_type]..skill_name.."|r"
 					func(prof, idx, name_pair, num_avail, level, single)
-					Debug("Scan()", prof, idx, skill_name, num_avail, level, tostring(single))
 				end
 			end
 			CloseTradeSkill()
