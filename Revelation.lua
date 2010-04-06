@@ -189,6 +189,7 @@ do
 		CastSpellByName(prof)
 		CloseTradeSkill()
 
+		DoTradeSkill(skill_idx, amount or 1)
 		CloseDropDownMenus()
 
 		if prof == PROF_ENCHANTING and cur_item.type == L["Trade Goods"] and cur_item.subtype ~= L["Armor Enchantment"] and cur_item.subtype ~= L["Weapon Enchantment"] then
