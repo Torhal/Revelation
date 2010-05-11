@@ -676,13 +676,27 @@ do
 		-- Static popup initialization
 		-----------------------------------------------------------------------
 		StaticPopupDialogs["Revelation_CraftItems"] = {
-			button1 = OKAY,
-			button2 = CANCEL,
+			button1 = _G.OKAY,
+			button2 = _G.CANCEL,
+			OnShow = function(self)
+					 self.button1:Disable();
+					 self.button2:Enable();
+					 self.editBox:SetFocus();
+				 end,
 			OnAccept = OnCraftItems,
 			EditBoxOnEnterPressed = OnCraftItems,
 			EditBoxOnEscapePressed = function(self)
 							 self:GetParent():Hide()
 						 end,
+			EditBoxOnTextChanged = function (self)
+						       local parent = self:GetParent();
+
+						       if parent.editBox:GetText() ~= "" then
+							       parent.button1:Enable();
+						       else
+							       parent.button1:Disable();
+						       end
+					       end,
 			timeout = 0,
 			hideOnEscape = 1,
 			exclusive = 1,
