@@ -208,20 +208,21 @@ do
 
 	function OnCraftItems(self)
 		local parent = self:GetParent()
-		local amount = tonumber(_G[parent:GetName().."EditBox"]:GetText())
+		local edit_box = parent.editBox or self.editBox
+		local amount = tonumber(edit_box:GetText())
 
-		_G[parent:GetName().."EditBox"]:SetText("")
-
-		if amount == "nil" then
+		if amount == "" or amount == "nil" then
 			amount = nil
 		end
+		edit_box:SetText("")
+
 		local prof, skill_idx, max = string.split(":", craft_data)
 
 		if not amount or amount < 1 or amount > tonumber(max) then
 			return
 		end
 		CraftItem(self, string.format("%s:%d:%d", prof, skill_idx, amount))
-		parent:Hide()
+		edit_box:GetParent():Hide()
 	end
 
 	local function CraftItem_Popup(self, data)
