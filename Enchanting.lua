@@ -30,12 +30,19 @@ function common.CanDisenchant()
 			[20407] = true,	-- Twilight Cultist Robe
 			[20408] = true,	-- Twilight Cultist Cowl
 			[21766] = true,	-- Opal Necklace of Impact
+			[29174] = true,	-- Watcher's Cowl
 			[29378] = true,	-- Starheart Baton
 			[31336] = true,	-- Blade of Wizardry
 			[32540] = true,	-- Terokk's Might
 			[32541] = true,	-- Terokk's Wisdom
 			[32660] = true,	-- Crystalforged Sword
 			[32662] = true,	-- Flaming Quartz Staff
+			[32912] = true, -- Yellow Brewfest Stein
+			[32915] = true,	-- Filled Yellow Brewfest Stein
+			[32917] = true,	-- Filled Yellow Brewfest Stein
+			[32918] = true,	-- Filled Yellow Brewfest Stein
+			[32919] = true,	-- Filled Yellow Brewfest Stein
+			[32920] = true,	-- Filled Yellow Brewfest Stein
 		}
 	end
 
