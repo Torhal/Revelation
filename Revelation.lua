@@ -248,8 +248,9 @@ do
 		local has_arrow = false
 		local sub_menu
 		local normal_name = skill_name.normal
+		local multiple_ok = (prof ~= PROF_ENCHANTING) or VALID_TRADE_GOOD[cur_item.subtype]
 
-		if prof ~= PROF_ENCHANTING and num_avail > 1 then
+		if multiple_ok and num_avail > 1 then
 			has_arrow = true
 			sub_menu = AcquireTable()
 
