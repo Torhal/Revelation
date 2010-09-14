@@ -355,6 +355,9 @@ do
 						break
 					end
 				end
+			elseif cur_item.subtype == L["Enchanting"] then
+				IterTrade(prof, skill_idx, skill_name, num_avail, level, single)
+				return
 			end
 		elseif cur_item.eqloc == "INVTYPE_WEAPON" or cur_item.eqloc == "INVTYPE_WEAPONMAINHAND" or cur_item.eqloc == "INVTYPE_WEAPONOFFHAND" then
 			if (not string.find(normal_name, EquipSlot["INVTYPE_2HWEAPON"])) and string.find(normal_name, eqref) then
