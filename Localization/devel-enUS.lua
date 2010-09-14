@@ -14,6 +14,7 @@ L["Cloak"] = true
 L["Create 1 - %d %s."] = true
 L["Create every %s you have reagents for."] = true
 L["Either no recipe or no reagents were found."] = true
+L["Enchanting"] = true
 L["Gloves"] = true
 L["Ring"] = true
 L["Select the key to press when mouse-clicking for menu display."] = true

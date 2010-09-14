@@ -115,6 +115,15 @@ local DIFFICULTY_COLORS = {
 	["optimal"]	= "|cffff8040",
 }
 
+local IS_VELLUM = {
+	[L["Armor Enchantment"]]	= true,
+	[L["Weapon Enchantment"]]	= true,
+}
+
+local VALID_TRADE_GOOD = {
+	[L["Enchanting"]]		= true,
+}
+
 -------------------------------------------------------------------------------
 -- Variables.
 -------------------------------------------------------------------------------
@@ -192,7 +201,7 @@ do
 		DoTradeSkill(skill_idx, amount or 1)
 		CloseDropDownMenus()
 
-		if prof == PROF_ENCHANTING and cur_item.type == L["Trade Goods"] and cur_item.subtype ~= L["Armor Enchantment"] and cur_item.subtype ~= L["Weapon Enchantment"] then
+		if prof == PROF_ENCHANTING and cur_item.type == L["Trade Goods"] and (not VALID_TRADE_GOOD[cur_item.subtype] or not IS_VELLUM[cur_item.subtype]) then
 			return
 		end
 
@@ -395,9 +404,7 @@ do
 		local func
 
 		if prof == PROF_ENCHANTING then
-			if (EquipSlot[cur_item.eqloc]
-			    or (string.find(cur_item.name, L["Armor Vellum"])
-				or string.find(cur_item.name, L["Weapon Vellum"]))) then
+			if EquipSlot[cur_item.eqloc] or IS_VELLUM[cur_item.subtype] or VALID_TRADE_GOOD[cur_item.subtype] then
 				func = IterEnchant
 			end
 		else
@@ -540,8 +547,10 @@ do
 			if known_professions[PROF_RUNEFORGING] then
 				Scan(PROF_RUNEFORGING, item_level, true)
 			end
-		elseif item_type == L["Trade Goods"] and (item_subtype == L["Armor Enchantment"] or item_subtype == L["Weapon Enchantment"]) then
-			if known_professions[PROF_ENCHANTING] then
+		elseif item_type == L["Trade Goods"] and known_professions[PROF_ENCHANTING] then
+			if VALID_TRADE_GOOD[item_subtype] then
+				Scan(PROF_ENCHANTING, item_level, false)
+			elseif IS_VELLUM[item_subtype] then
 				-- Vellum item levels are 5 higher than the enchant which can be put on them.
 				Scan(PROF_ENCHANTING, max(1, item_level - 5), true)
 			end
@@ -680,9 +689,9 @@ do
 			button1 = _G.OKAY,
 			button2 = _G.CANCEL,
 			OnShow = function(self)
-					 self.button1:Disable();
-					 self.button2:Enable();
-					 self.editBox:SetFocus();
+					 self.button1:Disable()
+					 self.button2:Enable()
+					 self.editBox:SetFocus()
 				 end,
 			OnAccept = OnCraftItems,
 			EditBoxOnEnterPressed = OnCraftItems,
@@ -690,12 +699,12 @@ do
 							 self:GetParent():Hide()
 						 end,
 			EditBoxOnTextChanged = function (self)
-						       local parent = self:GetParent();
+						       local parent = self:GetParent()
 
 						       if parent.editBox:GetText() ~= "" then
-							       parent.button1:Enable();
+							       parent.button1:Enable()
 						       else
-							       parent.button1:Disable();
+							       parent.button1:Disable()
 						       end
 					       end,
 			timeout = 0,
