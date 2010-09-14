@@ -280,7 +280,12 @@ do
 
 		local new_recipe = AcquireTable()
 		new_recipe.name = normal_name
-		new_recipe.text = string.format("|T%s:24:24|t %s (%d)", icon_cache[normal_name], skill_name.color, num_avail)
+
+		if num_avail > 1 then
+			new_recipe.text = string.format("|T%s:24:24|t %s (%d)", icon_cache[normal_name], skill_name.color, num_avail)
+		else
+			new_recipe.text = string.format("|T%s:24:24|t %s", icon_cache[normal_name], skill_name.color)
+		end
 		new_recipe.func = CraftItem
 		new_recipe.arg1 = string.format("%s:%d:1", prof, skill_idx)
 		new_recipe.hasArrow = has_arrow
