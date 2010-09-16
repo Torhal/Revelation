@@ -120,8 +120,8 @@ local IS_VELLUM = {
 	[L["Weapon Enchantment"]]	= true,
 }
 
-local VALID_TRADE_GOOD = {
-	[L["Enchanting"]]		= true,
+local ENCHANTING_TRADE_GOOD = {
+	[L["Enchanting"]]	= true,
 }
 
 -------------------------------------------------------------------------------
@@ -201,7 +201,7 @@ do
 		DoTradeSkill(skill_idx, amount or 1)
 		CloseDropDownMenus()
 
-		if prof == PROF_ENCHANTING and cur_item.type == L["Trade Goods"] and (not VALID_TRADE_GOOD[cur_item.subtype] or not IS_VELLUM[cur_item.subtype]) then
+		if prof == PROF_ENCHANTING and cur_item.type == L["Trade Goods"] and (not ENCHANTING_TRADE_GOOD[cur_item.subtype] or not IS_VELLUM[cur_item.subtype]) then
 			return
 		end
 
@@ -248,7 +248,7 @@ do
 		local has_arrow = false
 		local sub_menu
 		local normal_name = skill_name.normal
-		local multiple_ok = (prof ~= PROF_ENCHANTING) or VALID_TRADE_GOOD[cur_item.subtype]
+		local multiple_ok = (prof ~= PROF_ENCHANTING) or (prof == PROF_ENCHANTING and ENCHANTING_TRADE_GOOD[cur_item.subtype])
 
 		if multiple_ok and num_avail > 1 then
 			has_arrow = true
@@ -413,7 +413,7 @@ do
 		local func
 
 		if prof == PROF_ENCHANTING then
-			if EquipSlot[cur_item.eqloc] or IS_VELLUM[cur_item.subtype] or VALID_TRADE_GOOD[cur_item.subtype] then
+			if EquipSlot[cur_item.eqloc] or IS_VELLUM[cur_item.subtype] or ENCHANTING_TRADE_GOOD[cur_item.subtype] then
 				func = IterEnchant
 			end
 		else
@@ -491,6 +491,14 @@ do
 		notCheckable = true
 	}
 
+	local function ScanEverything()
+		for prof, known in pairs(known_professions) do
+			if known then
+				Scan(prof, 1, false)
+			end
+		end
+	end
+
 	function Revelation:CreateMenu(anchor, item_link)
 		if not item_link then
 			return
@@ -556,12 +564,16 @@ do
 			if known_professions[PROF_RUNEFORGING] then
 				Scan(PROF_RUNEFORGING, item_level, true)
 			end
-		elseif item_type == L["Trade Goods"] and known_professions[PROF_ENCHANTING] then
-			if VALID_TRADE_GOOD[item_subtype] then
+		elseif item_type == L["Trade Goods"] then
+			local is_enchanter = known_professions[PROF_ENCHANTING]
+
+			if is_enchanter and ENCHANTING_TRADE_GOOD[item_subtype] then
 				Scan(PROF_ENCHANTING, item_level, false)
-			elseif IS_VELLUM[item_subtype] then
+			elseif is_enchanter and IS_VELLUM[item_subtype] then
 				-- Vellum item levels are 5 higher than the enchant which can be put on them.
 				Scan(PROF_ENCHANTING, max(1, item_level - 5), true)
+			else
+				ScanEverything()
 			end
 		elseif MY_CLASS == "ROGUE" and common.CanPick() then
 			local entry = AcquireTable()
@@ -574,11 +586,7 @@ do
 			entry.notCheckable = true
 			table.insert(recipes, entry)
 		else
-			for prof, known in pairs(known_professions) do
-				if known then
-					Scan(prof, 1, false)
-				end
-			end
+			ScanEverything()
 		end
 
 		if #recipes == 0 then
