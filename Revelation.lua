@@ -504,7 +504,10 @@ do
 		for prof, index in pairs(known_professions) do
 			if index then
 				local name = GetProfessionInfo(index)
-				Scan(name, 1, false)
+
+				if VALID_PROFESSIONS[name] then
+					Scan(name, 1, false)
+				end
 			end
 		end
 	end
