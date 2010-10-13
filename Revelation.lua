@@ -124,6 +124,21 @@ local ENCHANTING_TRADE_GOOD = {
 	[L["Enchanting"]]	= true,
 }
 
+local VALID_PROFESSIONS = {
+	[GetSpellInfo(2259)]	= true, -- Alchemy
+	[GetSpellInfo(2018)]	= true, -- Blacksmithing
+	[GetSpellInfo(2550)]	= true, -- Cooking
+	[PROF_ENCHANTING]	= true, -- Enchanting
+	[GetSpellInfo(4036)]	= true, -- Engineering
+	[GetSpellInfo(746)]	= true, -- First Aid
+	[GetSpellInfo(2108)]	= true, -- Leatherworking
+	[GetSpellInfo(61422)]	= true, -- Smelting
+	[GetSpellInfo(3908)]	= true, -- Tailoring
+	[PROF_JEWELCRAFTING]	= true, -- Jewelcrafting
+	[PROF_INSCRIPTION]	= true, -- Inscription
+	[PROF_RUNEFORGING]	= true, -- Runeforging
+}
+
 -------------------------------------------------------------------------------
 -- Variables.
 -------------------------------------------------------------------------------
@@ -137,18 +152,12 @@ local db
 local DropDown
 
 local known_professions = {
-	[GetSpellInfo(2259)]	= false, -- Alchemy
-	[GetSpellInfo(2018)]	= false, -- Blacksmithing
-	[GetSpellInfo(2550)]	= false, -- Cooking
-	[PROF_ENCHANTING]	= false, -- Enchanting
-	[GetSpellInfo(4036)]	= false, -- Engineering
-	[GetSpellInfo(746)]	= false, -- First Aid
-	[GetSpellInfo(2108)]	= false, -- Leatherworking
-	[GetSpellInfo(61422)]	= false, -- Smelting
-	[GetSpellInfo(3908)]	= false, -- Tailoring
-	[PROF_JEWELCRAFTING]	= false, -- Jewelcrafting
-	[PROF_INSCRIPTION]	= false, -- Inscription
-	[PROF_RUNEFORGING]	= false, -- Runeforging
+	["prof1"]	= false,
+	["prof2"]	= false,
+	["archaeology"]	= false,
+	["fishing"]	= false,
+	["cooking"]	= false,
+	["firstaid"]	= false,
 }
 
 -------------------------------------------------------------------------------
@@ -492,11 +501,23 @@ do
 	}
 
 	local function ScanEverything()
-		for prof, known in pairs(known_professions) do
-			if known then
-				Scan(prof, 1, false)
+		for prof, index in pairs(known_professions) do
+			if index then
+				local name = GetProfessionInfo(index)
+				Scan(name, 1, false)
 			end
 		end
+	end
+
+	local function HasProfession(profession_name)
+		local known = known_professions
+
+		if known.prof1 and profession_name == (GetProfessionInfo(known.prof1)) then
+			return true
+		elseif known.prof2 and profession_name == (GetProfessionInfo(known.prof2)) then
+			return true
+		end
+		return false
 	end
 
 	function Revelation:CreateMenu(anchor, item_link)
@@ -518,23 +539,10 @@ do
 		end
 		wipe(recipes)
 
-		-- Reset the table, they may have unlearnt a profession - I robbed Ackis!
-		for i in pairs(known_professions) do
-			known_professions[i] = false
-		end
+		local known = known_professions
 
-		-- Grab names from the spell book
-		for index = 1, 25, 1 do
-			local spell_name = GetSpellName(index, BOOKTYPE_SPELL)
+		known.prof1, known.prof2, known.archaeology, known.fishing, known.cooking, known.firstaid = GetProfessions()
 
-			if not spell_name or (index == 25) then
-				break
-			end
-
-			if known_professions[spell_name] == false then
-				known_professions[spell_name] = true
-			end
-		end
 		local item_name, item_link, item_quality, item_level, item_minlevel, item_type, item_subtype, item_stack, item_eqloc, _ = GetItemInfo(item_link)
 
 		cur_item.name = item_name
@@ -553,19 +561,19 @@ do
 		SetCVar("Sound_EnableSFX", 0)
 
 		if item_type == _G.ARMOR or string.find(item_type, L["Weapon"]) then
-			if known_professions[PROF_ENCHANTING] then
+			if HasProfession(PROF_ENCHANTING) then
 				Scan(PROF_ENCHANTING, item_level, true)
 			end
 
-			if known_professions[PROF_INSCRIPTION] then
+			if HasProfession(PROF_INSCRIPTION) then
 				Scan(PROF_INSCRIPTION, item_level, true)
 			end
 
-			if known_professions[PROF_RUNEFORGING] then
+			if HasProfession(PROF_RUNEFORGING) then
 				Scan(PROF_RUNEFORGING, item_level, true)
 			end
 		elseif item_type == L["Trade Goods"] then
-			local is_enchanter = known_professions[PROF_ENCHANTING]
+			local is_enchanter = HasProfession(PROF_ENCHANTING)
 
 			if is_enchanter and ENCHANTING_TRADE_GOOD[item_subtype] then
 				Scan(PROF_ENCHANTING, item_level, false)
