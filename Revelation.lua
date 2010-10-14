@@ -115,11 +115,6 @@ local DIFFICULTY_COLORS = {
 	["optimal"]	= "|cffff8040",
 }
 
-local IS_VELLUM = {
-	[L["Armor Enchantment"]]	= true,
-	[L["Weapon Enchantment"]]	= true,
-}
-
 local ENCHANTING_TRADE_GOOD = {
 	[L["Enchanting"]]	= true,
 }
@@ -210,7 +205,7 @@ do
 		DoTradeSkill(skill_idx, amount or 1)
 		CloseDropDownMenus()
 
-		if prof == PROF_ENCHANTING and cur_item.type == L["Trade Goods"] and (not ENCHANTING_TRADE_GOOD[cur_item.subtype] or not IS_VELLUM[cur_item.subtype]) then
+		if prof == PROF_ENCHANTING and cur_item.type == L["Trade Goods"] and not ENCHANTING_TRADE_GOOD[cur_item.subtype] and cur_item.subtype ~= L["Item Enchantment"] then
 			return
 		end
 
@@ -330,17 +325,14 @@ end
 
 local IterEnchant
 do
-	local ArmorEnch = {
+	local ItemEnch = {
 		L["Chest"],
 		L["Boots"],
 		L["Bracer"],
 		L["Gloves"],
 		L["Ring"],
 		L["Cloak"],
-		L["Shield"]
-	}
-
-	local WeaponEnch = {
+		L["Shield"],
 		L["Staff"],
 		_G.ENCHSLOT_2HWEAPON,
 		_G.ENCHSLOT_WEAPON
@@ -356,15 +348,8 @@ do
 		local normal_name = skill_name.normal
 
 		if not eqref then
-			if string.find(cur_item.name, L["Armor Vellum"]) then
-				for k, v in pairs(ArmorEnch) do
-					if string.find(normal_name, v) then
-						found = true
-						break
-					end
-				end
-			elseif string.find(cur_item.name, L["Weapon Vellum"]) then
-				for k, v in pairs(WeaponEnch) do
+			if string.find(cur_item.name, L["Enchanting Vellum"]) then
+				for k, v in pairs(ItemEnch) do
 					if string.find(normal_name, v) then
 						found = true
 						break
@@ -422,7 +407,7 @@ do
 		local func
 
 		if prof == PROF_ENCHANTING then
-			if EquipSlot[cur_item.eqloc] or IS_VELLUM[cur_item.subtype] or ENCHANTING_TRADE_GOOD[cur_item.subtype] then
+			if EquipSlot[cur_item.eqloc] or cur_item.subtype == L["Item Enchantment"] or ENCHANTING_TRADE_GOOD[cur_item.subtype] then
 				func = IterEnchant
 			end
 		else
@@ -558,8 +543,6 @@ do
 		cur_item.stack = item_stack
 		cur_item.eqloc = item_eqloc
 
-		Debug("Item type", item_type, "Item subtype", item_subtype)
-
 		local sfx = tonumber(GetCVar("Sound_EnableSFX"))
 		SetCVar("Sound_EnableSFX", 0)
 
@@ -580,9 +563,8 @@ do
 
 			if is_enchanter and ENCHANTING_TRADE_GOOD[item_subtype] then
 				Scan(PROF_ENCHANTING, item_level, false)
-			elseif is_enchanter and IS_VELLUM[item_subtype] then
-				-- Vellum item levels are 5 higher than the enchant which can be put on them.
-				Scan(PROF_ENCHANTING, max(1, item_level - 5), true)
+			elseif is_enchanter and item_subtype == L["Item Enchantment"] then
+				Scan(PROF_ENCHANTING, item_level, true)
 			else
 				ScanEverything()
 			end
