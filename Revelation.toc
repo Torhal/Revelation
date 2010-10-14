@@ -13,8 +13,6 @@
 ## LoadManagers: AddonLoader
 ## X-LoadOn-Always: Delayed
 
-## X-Compatible-With: 30300
-
 #@no-lib-strip@
 embeds.xml
 #@end-no-lib-strip@
