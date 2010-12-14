@@ -16,28 +16,14 @@ local select = _G.select
 -------------------------------------------------------------------------------
 -- Localized Blizzard API
 -------------------------------------------------------------------------------
-local CastSpellByName = _G.CastSpellByName
-local CloseTradeSkill = _G.CloseTradeSkill
-local GameTooltip, GetSpellInfo = _G.GameTooltip, _G.GetSpellInfo
-local GetContainerItemLink = _G.GetContainerItemLink
-local GetInventoryItemLink = _G.GetInventoryItemLink
-local GetItemInfo = _G.GetItemInfo
-local GetMouseFocus = _G.GetMouseFocus
-local GetNumTradeSkills = _G.GetNumTradeSkills
-local GetSpellName = _G.GetSpellName
-local GetTradeSkillIcon = _G.GetTradeSkillIcon
-local GetTradeSkillInfo = _G.GetTradeSkillInfo
-local GetTradeSkillItemLink = _G.GetTradeSkillItemLink
-local GetTradeSkillNumReagents = _G.GetTradeSkillNumReagents
-local GetTradeSkillReagentInfo = _G.GetTradeSkillReagentInfo
-local GetTradeSkillRecipeLink = _G.GetTradeSkillRecipeLink
-local BOOKTYPE_SPELL = _G.BOOKTYPE_SPELL
-local LibStub = _G.LibStub
+local GameTooltip = _G.GameTooltip
 
 -------------------------------------------------------------------------------
 -- AddOn namespace
 -------------------------------------------------------------------------------
 local ADDON_NAME, common = ...
+
+local LibStub = _G.LibStub
 local Revelation = LibStub("AceAddon-3.0"):NewAddon(ADDON_NAME, "AceHook-3.0")
 
 local dev = false
@@ -60,7 +46,7 @@ highlight._texture:SetAllPoints(highlight)
 local secure_frame = CreateFrame("Button", "RevelationSecureFrame", UIParent, "SecureActionButtonTemplate")
 secure_frame:SetAttribute("type", "macro")
 secure_frame:SetScript("OnEnter", function(self, motion)
-					  GameTooltip_SetDefaultAnchor(GameTooltip, self)
+					  _G.GameTooltip_SetDefaultAnchor(GameTooltip, self)
 					  GameTooltip:SetHyperlink(self.link)
 
 					  highlight:SetParent(self)
@@ -81,16 +67,16 @@ secure_frame:Hide()
 -------------------------------------------------------------------------------
 local MY_CLASS			= select(2, UnitClass("player"))
 
-local PROF_ENCHANTING		= GetSpellInfo(7411)
-local PROF_INSCRIPTION		= GetSpellInfo(45357)
-local PROF_JEWELCRAFTING	= GetSpellInfo(25229)
-local PROF_RUNEFORGING		= GetSpellInfo(53428)
+local PROF_ENCHANTING		= _G.GetSpellInfo(7411)
+local PROF_INSCRIPTION		= _G.GetSpellInfo(45357)
+local PROF_JEWELCRAFTING	= _G.GetSpellInfo(25229)
+local PROF_RUNEFORGING		= _G.GetSpellInfo(53428)
 
-local SPELL_DISENCHANT		= GetSpellInfo(13262)
-local SPELL_MILLING		= GetSpellInfo(51005)
-local SPELL_PROSPECTING		= GetSpellInfo(31252)
+local SPELL_DISENCHANT		= _G.GetSpellInfo(13262)
+local SPELL_MILLING		= _G.GetSpellInfo(51005)
+local SPELL_PROSPECTING		= _G.GetSpellInfo(31252)
 
-local SPELL_PICK_LOCK		= GetSpellInfo(1804)
+local SPELL_PICK_LOCK		= _G.GetSpellInfo(1804)
 local ICON_PICK_LOCK
 
 local EquipSlot = {
@@ -120,15 +106,15 @@ local ENCHANTING_TRADE_GOOD = {
 }
 
 local VALID_PROFESSIONS = {
-	[GetSpellInfo(2259)]	= true, -- Alchemy
-	[GetSpellInfo(2018)]	= true, -- Blacksmithing
-	[GetSpellInfo(2550)]	= true, -- Cooking
+	[_G.GetSpellInfo(2259)]	= true, -- Alchemy
+	[_G.GetSpellInfo(2018)]	= true, -- Blacksmithing
+	[_G.GetSpellInfo(2550)]	= true, -- Cooking
 	[PROF_ENCHANTING]	= true, -- Enchanting
-	[GetSpellInfo(4036)]	= true, -- Engineering
-	[GetSpellInfo(746)]	= true, -- First Aid
-	[GetSpellInfo(2108)]	= true, -- Leatherworking
-	[GetSpellInfo(61422)]	= true, -- Smelting
-	[GetSpellInfo(3908)]	= true, -- Tailoring
+	[_G.GetSpellInfo(4036)]	= true, -- Engineering
+	[_G.GetSpellInfo(746)]	= true, -- First Aid
+	[_G.GetSpellInfo(2108)]	= true, -- Leatherworking
+	[_G.GetSpellInfo(61422)]	= true, -- Smelting
+	[_G.GetSpellInfo(3908)]	= true, -- Tailoring
 	[PROF_JEWELCRAFTING]	= true, -- Jewelcrafting
 	[PROF_INSCRIPTION]	= true, -- Inscription
 	[PROF_RUNEFORGING]	= true, -- Runeforging
@@ -199,13 +185,13 @@ do
 	local function CraftItem(self, data)
 		local prof, skill_idx, amount = string.split(":", data)
 
-		CastSpellByName(prof)
-		CloseTradeSkill()
+		_G.CastSpellByName(prof)
+		_G.CloseTradeSkill()
 
 		DoTradeSkill(skill_idx, amount or 1)
 		CloseDropDownMenus()
 
-		if prof == PROF_ENCHANTING and cur_item.type == L["Trade Goods"] and not ENCHANTING_TRADE_GOOD[cur_item.subtype] and cur_item.subtype ~= L["Item Enchantment"] then
+		if prof == PROF_ENCHANTING and cur_item.type == L["Trade Goods"] and (not ENCHANTING_TRADE_GOOD[cur_item.subtype]) and cur_item.subtype ~= L["Item Enchantment"] then
 			return
 		end
 
@@ -277,10 +263,10 @@ do
 			entry2.notCheckable = true
 			table.insert(sub_menu, entry2)
 		end
-		local recipe_link = GetTradeSkillRecipeLink(skill_idx)
+		local recipe_link = _G.GetTradeSkillRecipeLink(skill_idx)
 
 		if not icon_cache[normal_name] then
-			icon_cache[normal_name] = select(10, GetItemInfo(recipe_link)) or GetTradeSkillIcon(skill_idx)
+			icon_cache[normal_name] = select(10, _G.GetItemInfo(recipe_link)) or _G.GetTradeSkillIcon(skill_idx)
 		end
 
 		local new_recipe = AcquireTable()
@@ -309,8 +295,8 @@ local function IterTrade(prof, skill_idx, skill_name, num_avail, level, single)
 	if not rune_forge then
 		local is_reagent = false
 
-		for reagent = 1, GetTradeSkillNumReagents(skill_idx) do
-			if cur_item.name == GetTradeSkillReagentInfo(skill_idx, reagent) then
+		for reagent = 1, _G.GetTradeSkillNumReagents(skill_idx) do
+			if cur_item.name == _G.GetTradeSkillReagentInfo(skill_idx, reagent) then
 				is_reagent = true
 				break
 			end
@@ -377,7 +363,7 @@ do
 		if not found then
 			return
 		end
-		local _, _, ench_str = string.find(GetTradeSkillRecipeLink(skill_idx), "^|%x+|H(.+)|h%[.+%]")
+		local _, _, ench_str = string.find(_G.GetTradeSkillRecipeLink(skill_idx), "^|%x+|H(.+)|h%[.+%]")
 		local _, ench_num = string.split(":", ench_str)
 		local EnchantLevels = common.GetEnchantLevels()
 		local ench_level = EnchantLevels[tonumber(ench_num)]
@@ -415,23 +401,24 @@ do
 		end
 
 		if func then
-			CastSpellByName(prof)
+			_G.CastSpellByName(prof)
 
 			if ATSW_SkipSlowScan then
 				ATSW_SkipSlowScan()
 			end
+			local num_tradeskills = _G.GetNumTradeSkills()
 
 			-- Expand all headers for an accurate reading.
-			for i = GetNumTradeSkills(), 1, -1 do
-				local _, skill_type = GetTradeSkillInfo(i)
+			for i = num_tradeskills, 1, -1 do
+				local _, skill_type = _G.GetTradeSkillInfo(i)
 
 				if skill_type == "header" then
 					ExpandTradeSkillSubClass(i)
 				end
 			end
 
-			for idx = 1, GetNumTradeSkills() do
-				local skill_name, skill_type, num_avail, _, _ = GetTradeSkillInfo(idx)
+			for idx = 1, num_tradeskills do
+				local skill_name, skill_type, num_avail, _, _ = _G.GetTradeSkillInfo(idx)
 
 				if skill_name and skill_type ~= "header" and DIFFICULTY_IDS[skill_type] >= db.min_skill and DIFFICULTY_IDS[skill_type] <= db.max_skill then
 					name_pair.normal = skill_name
@@ -439,24 +426,24 @@ do
 					func(prof, idx, name_pair, num_avail, level, single)
 				end
 			end
-			CloseTradeSkill()
+			_G.CloseTradeSkill()
 		end
 
 		if not PROF_MENU_DATA then
 			PROF_MENU_DATA = {
 				[PROF_ENCHANTING]	= {
 					["name"]	= SPELL_DISENCHANT,
-					["icon"]	= select(3, GetSpellInfo(SPELL_DISENCHANT)),
+					["icon"]	= select(3, _G.GetSpellInfo(SPELL_DISENCHANT)),
 					["CanPerform"]	= common.CanDisenchant,
 				},
 				[PROF_INSCRIPTION]	= {
 					["name"]	= SPELL_MILLING,
-					["icon"]	= select(3, GetSpellInfo(SPELL_MILLING)),
+					["icon"]	= select(3, _G.GetSpellInfo(SPELL_MILLING)),
 					["CanPerform"]	= common.CanMill,
 				},
 				[PROF_JEWELCRAFTING]	= {
 					["name"]	= SPELL_PROSPECTING,
-					["icon"]	= select(3, GetSpellInfo(SPELL_PROSPECTING)),
+					["icon"]	= select(3, _G.GetSpellInfo(SPELL_PROSPECTING)),
 					["CanPerform"]	= common.CanProspect,
 				},
 			}
@@ -488,7 +475,7 @@ do
 	local function ScanEverything()
 		for prof, index in pairs(known_professions) do
 			if index then
-				local name = GetProfessionInfo(index)
+				local name = _G.GetProfessionInfo(index)
 
 				if VALID_PROFESSIONS[name] then
 					Scan(name, 1, false)
@@ -500,9 +487,9 @@ do
 	local function HasProfession(profession_name)
 		local known = known_professions
 
-		if known.prof1 and profession_name == (GetProfessionInfo(known.prof1)) then
+		if known.prof1 and profession_name == (_G.GetProfessionInfo(known.prof1)) then
 			return true
-		elseif known.prof2 and profession_name == (GetProfessionInfo(known.prof2)) then
+		elseif known.prof2 and profession_name == (_G.GetProfessionInfo(known.prof2)) then
 			return true
 		end
 		return false
@@ -517,7 +504,7 @@ do
 			if not ModifiersPressed() then	-- Enforce for HandleModifiedItemClick
 				return
 			end
-			anchor = GetMouseFocus()
+			anchor = _G.GetMouseFocus()
 		end
 
 		for i = 1, #active_tables do	-- Release the tables for re-use.
@@ -531,7 +518,7 @@ do
 
 		known.prof1, known.prof2, known.archaeology, known.fishing, known.cooking, known.firstaid = GetProfessions()
 
-		local item_name, item_link, item_quality, item_level, item_minlevel, item_type, item_subtype, item_stack, item_eqloc, _ = GetItemInfo(item_link)
+		local item_name, item_link, item_quality, item_level, item_minlevel, item_type, item_subtype, item_stack, item_eqloc, _ = _G.GetItemInfo(item_link)
 
 		cur_item.name = item_name
 		cur_item.link = item_link
@@ -571,7 +558,7 @@ do
 		elseif MY_CLASS == "ROGUE" and common.CanPick() then
 			local entry = AcquireTable()
 
-			ICON_PICK_LOCK = ICON_PICK_LOCK or select(3, GetSpellInfo(SPELL_PICK_LOCK))
+			ICON_PICK_LOCK = ICON_PICK_LOCK or select(3, _G.GetSpellInfo(SPELL_PICK_LOCK))
 
 			entry.name = SPELL_PICK_LOCK
 			entry.text = string.format("|T%s:24:24|t %s", ICON_PICK_LOCK, SPELL_PICK_LOCK)
@@ -757,7 +744,7 @@ do
 
 		if ModifiersPressed() and button == MouseButton[db.button] then
 			common.slot_id = hooked_self:GetID()
-			self:CreateMenu(hooked_self, GetInventoryItemLink("player", common.slot_id))
+			self:CreateMenu(hooked_self, _G.GetInventoryItemLink("player", common.slot_id))
 		else
 			self.hooks.PaperDollItemSlotButton_OnModifiedClick(...)
 		end
@@ -774,7 +761,7 @@ do
 		if ModifiersPressed() and button == MouseButton[db.button] then
 			common.bag_id = hooked_self:GetParent():GetID()
 			common.slot_id = hooked_self:GetID()
-			self:CreateMenu(hooked_self, GetContainerItemLink(common.bag_id, common.slot_id))
+			self:CreateMenu(hooked_self, _G.GetContainerItemLink(common.bag_id, common.slot_id))
 		end
 		self.hooks.ContainerFrameItemButton_OnModifiedClick(...)
 		click_handled = false
@@ -806,11 +793,11 @@ end
 hooksecurefunc("GameTooltip_AddNewbieTip",
 	       function(frame, normalText, r, g, b, newbieText, noNormalText)
 		       if normalText == "RevelationTooltip" then
-			       GameTooltip_SetDefaultAnchor(GameTooltip, frame)
+			       _G.GameTooltip_SetDefaultAnchor(GameTooltip, frame)
 			       GameTooltip:AddLine(newbieText)
 			       GameTooltip:Show()
 		       elseif normalText == "RevelationItemLink" then
-			       GameTooltip_SetDefaultAnchor(GameTooltip, frame)
+			       _G.GameTooltip_SetDefaultAnchor(GameTooltip, frame)
 			       GameTooltip:SetHyperlink(newbieText)
 		       end
 	       end)
