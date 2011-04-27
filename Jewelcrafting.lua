@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- AddOn namespace
 -------------------------------------------------------------------------------
-local ADDON_NAME, common = ...
+local ADDON_NAME, private = ...
 
 
 -------------------------------------------------------------------------------
@@ -12,7 +12,7 @@ local CAN_PROSPECT
 -------------------------------------------------------------------------------
 -- Functions.
 -------------------------------------------------------------------------------
-function common.CanProspect()
+function private.CanProspect()
 	if not CAN_PROSPECT then
 		CAN_PROSPECT = {
 			[2770]	= true,	-- Copper Ore
@@ -28,7 +28,7 @@ function common.CanProspect()
 		}
 	end
 
-	local id = select(3, common.cur_item.link:find("item:(%d+):"))
+	local id = select(3, private.cur_item.link:find("item:(%d+):"))
 
 	if not id or (id and not CAN_PROSPECT[tonumber(id)]) then
 		return false

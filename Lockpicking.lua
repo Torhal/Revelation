@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- AddOn namespace
 -------------------------------------------------------------------------------
-local ADDON_NAME, common = ...
+local ADDON_NAME, private = ...
 
 
 -------------------------------------------------------------------------------
@@ -12,7 +12,7 @@ local PICKABLE
 -------------------------------------------------------------------------------
 -- Functions.
 -------------------------------------------------------------------------------
-function common.CanPick()
+function private.CanPick()
 	if not PICKABLE then
 		PICKABLE = {
 			["4632"]	= 1,	-- Ornate Bronze Lockbox
@@ -44,7 +44,7 @@ function common.CanPick()
 		}
 	end
 
-	local id = select(3, common.cur_item.link:find("item:(%d+):"))
+	local id = select(3, private.cur_item.link:find("item:(%d+):"))
 
 	if not id or (id and not PICKABLE[id]) then
 		return false, nil

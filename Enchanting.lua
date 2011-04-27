@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- AddOn namespace
 -------------------------------------------------------------------------------
-local ADDON_NAME, common = ...
+local ADDON_NAME, private = ...
 
 
 -------------------------------------------------------------------------------
@@ -13,8 +13,8 @@ local ENCHANT_LEVELS
 -------------------------------------------------------------------------------
 -- Functions.
 -------------------------------------------------------------------------------
-function common.CanDisenchant()
-	local cur_item = common.cur_item
+function private.CanDisenchant()
+	local cur_item = private.cur_item
 	local id = select(3, cur_item.link:find("item:(%d+):"))
 
 	if not CANNOT_DE then
@@ -59,7 +59,7 @@ function common.CanDisenchant()
 end
 
 
-function common.GetEnchantLevels()
+function private.GetEnchantLevels()
 	if not ENCHANT_LEVELS then
 		ENCHANT_LEVELS = {
 			[25086] = 35,	-- Enchant Cloak - Dodge

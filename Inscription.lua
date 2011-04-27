@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- AddOn namespace
 -------------------------------------------------------------------------------
-local ADDON_NAME, common = ...
+local ADDON_NAME, private = ...
 
 
 -------------------------------------------------------------------------------
@@ -12,7 +12,7 @@ local MILLABLE
 -------------------------------------------------------------------------------
 -- Functions.
 -------------------------------------------------------------------------------
-function common.CanMill()
+function private.CanMill()
 	if not MILLABLE then
 		MILLABLE = {
 			[765]	= true,	-- Silverleaf
@@ -60,7 +60,7 @@ function common.CanMill()
 		}
 	end
 
-	local id = select(3, common.cur_item.link:find("item:(%d+):"))
+	local id = select(3, private.cur_item.link:find("item:(%d+):"))
 
 	if not id or (id and not MILLABLE[tonumber(id)]) then
 		return false
