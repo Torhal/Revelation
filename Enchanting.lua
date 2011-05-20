@@ -243,6 +243,9 @@ function private.GetEnchantLevels()
 			[74255]	= 300,	-- Enchant Gloves - Greater Mastery
 			[74256]	= 300,	-- Enchant Bracer - Greater Speed
 			[95471]	= 300,	-- Enchant 2H Weapon - Mighty Agility
+			[96261] = 300,  -- Enchant Bracer - Major Strength
+			[96262] = 300,  -- Enchant Bracer - Mighty Intellect
+			[96264] = 300,  -- Enchant Bracer - Agility
 		}
 	end
 	return ENCHANT_LEVELS
