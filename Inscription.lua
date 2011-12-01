@@ -1,8 +1,12 @@
 -------------------------------------------------------------------------------
+-- Localized Lua API
+-------------------------------------------------------------------------------
+local _G = getfenv(0)
+
+-------------------------------------------------------------------------------
 -- AddOn namespace
 -------------------------------------------------------------------------------
 local ADDON_NAME, private = ...
-
 
 -------------------------------------------------------------------------------
 -- Constants
@@ -60,9 +64,9 @@ function private.CanMill()
 		}
 	end
 
-	local id = select(3, private.cur_item.link:find("item:(%d+):"))
+	local id = _G.select(3, private.cur_item.link:find("item:(%d+):"))
 
-	if not id or (id and not MILLABLE[tonumber(id)]) then
+	if not id or not MILLABLE[_G.tonumber(id)] then
 		return false
 	end
 	return true

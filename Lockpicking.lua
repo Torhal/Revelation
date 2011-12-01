@@ -1,8 +1,12 @@
 -------------------------------------------------------------------------------
+-- Localized Lua API
+-------------------------------------------------------------------------------
+local _G = getfenv(0)
+
+-------------------------------------------------------------------------------
 -- AddOn namespace
 -------------------------------------------------------------------------------
 local ADDON_NAME, private = ...
-
 
 -------------------------------------------------------------------------------
 -- Constants
@@ -43,10 +47,9 @@ function private.CanPick()
 			["45986"]	= 400,	-- Tiny Titanium Lockbox
 		}
 	end
+	local id = _G.select(3, private.cur_item.link:find("item:(%d+):"))
 
-	local id = select(3, private.cur_item.link:find("item:(%d+):"))
-
-	if not id or (id and not PICKABLE[id]) then
+	if not id or not PICKABLE[id] then
 		return false, nil
 	end
 	return true, PICKABLE[id]

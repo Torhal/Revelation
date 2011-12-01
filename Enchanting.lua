@@ -1,8 +1,12 @@
 -------------------------------------------------------------------------------
+-- Localized Lua API
+-------------------------------------------------------------------------------
+local _G = getfenv(0)
+
+-------------------------------------------------------------------------------
 -- AddOn namespace
 -------------------------------------------------------------------------------
 local ADDON_NAME, private = ...
-
 
 -------------------------------------------------------------------------------
 -- Constants
@@ -15,7 +19,7 @@ local ENCHANT_LEVELS
 -------------------------------------------------------------------------------
 function private.CanDisenchant()
 	local cur_item = private.cur_item
-	local id = select(3, cur_item.link:find("item:(%d+):"))
+	local id = _G.select(3, cur_item.link:find("item:(%d+):"))
 
 	if not CANNOT_DE then
 		CANNOT_DE = {
@@ -46,7 +50,7 @@ function private.CanDisenchant()
 		}
 	end
 
-	if not id or (id and CANNOT_DE[tonumber(id)]) then
+	if not id or CANNOT_DE[_G.tonumber(id)] then
 		return false
 	end
 	local type = cur_item.type
