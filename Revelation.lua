@@ -327,35 +327,34 @@ do
 		if num_avail < 1 then
 			return
 		end
-
-		local eqref = cur_item.eqloc and EquipSlot[cur_item.eqloc] or nil
+		local eqref = cur_item.eqloc and EquipSlot[cur_item.eqloc]
 		local found = false
 
-		if not eqref then
-			if string.find(cur_item.name, L["Enchanting Vellum"]) then
-				for k, v in pairs(ItemEnch) do
-					if skill_name_data.normal:find(v) then
-						found = true
-						break
-					end
+		if eqref then
+			if cur_item.eqloc == "INVTYPE_WEAPON" or cur_item.eqloc == "INVTYPE_WEAPONMAINHAND" or cur_item.eqloc == "INVTYPE_WEAPONOFFHAND" then
+				if (not skill_name_data.normal:find(EquipSlot["INVTYPE_2HWEAPON"])) and skill_name_data.normal:find(eqref) then
+					found = true
 				end
-			elseif cur_item.subtype == L["Enchanting"] then
-				IterTrade(prof, skill_idx, skill_name_data, num_avail, level, single)
-				return
-			end
-		elseif cur_item.eqloc == "INVTYPE_WEAPON" or cur_item.eqloc == "INVTYPE_WEAPONMAINHAND" or cur_item.eqloc == "INVTYPE_WEAPONOFFHAND" then
-			if (not skill_name_data.normal:find(EquipSlot["INVTYPE_2HWEAPON"])) and skill_name_data.normal:find(eqref) then
+			elseif cur_item.eqloc == "INVTYPE_2HWEAPON" then
+				if skill_name_data.normal:find(eqref)
+					or skill_name_data.normal:find(EquipSlot["INVTYPE_WEAPON"])
+					or (cur_item.subtype == L["Staves"]
+					and skill_name_data.normal:find(L["Staff"])) then
+					found = true
+				end
+			elseif skill_name_data.normal:find(eqref) then
 				found = true
 			end
-		elseif cur_item.eqloc == "INVTYPE_2HWEAPON" then
-			if skill_name_data.normal:find(eqref)
-			   or skill_name_data.normal:find(EquipSlot["INVTYPE_WEAPON"])
-			   or (cur_item.subtype == L["Staves"]
-			       and skill_name_data.normal:find(L["Staff"])) then
-				found = true
+		elseif string.find(cur_item.name, L["Enchanting Vellum"]) then
+			for k, v in pairs(ItemEnch) do
+				if skill_name_data.normal:find(v) then
+					found = true
+					break
+				end
 			end
-		elseif skill_name_data.normal:find(eqref) then
-			found = true
+		elseif cur_item.subtype == L["Enchanting"] then
+			IterTrade(prof, skill_idx, skill_name_data, num_avail, level, single)
+			return
 		end
 
 		if not found then
