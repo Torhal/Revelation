@@ -232,10 +232,10 @@ do
 
 	local icon_cache = {}
 
-	function AddRecipe(prof, skill_name, skill_idx, num_avail)
+	function AddRecipe(prof, skill_name_data, skill_idx, num_avail)
 		local has_arrow = false
 		local sub_menu
-		local normal_name = skill_name.normal
+		local normal_name = skill_name_data.normal
 		local multiple_ok = (prof ~= PROF_ENCHANTING) or (prof == PROF_ENCHANTING and ENCHANTING_TRADE_GOOD[cur_item.subtype])
 
 		if multiple_ok and num_avail > 1 then
@@ -271,9 +271,9 @@ do
 		new_recipe.name = normal_name
 
 		if num_avail > 1 then
-			new_recipe.text = ("%s (%d)"):format(skill_name.color, num_avail)
+			new_recipe.text = ("%s (%d)"):format(skill_name_data.color, num_avail)
 		else
-			new_recipe.text = skill_name.color
+			new_recipe.text = skill_name_data.color
 		end
 		new_recipe.icon = icon_cache[normal_name]
 		new_recipe.func = CraftItem
@@ -288,7 +288,7 @@ do
 end
 
 -- The level parameter only exists to make this interchangeable with IterEnchant()
-local function IterTrade(prof, skill_idx, skill_name, num_avail, level, single)
+local function IterTrade(prof, skill_idx, skill_name_data, num_avail, level, single)
 	local rune_forge = (cur_item.type == L["Weapon"]) and (prof == PROF_RUNEFORGING)
 
 	if not rune_forge then
@@ -305,7 +305,7 @@ local function IterTrade(prof, skill_idx, skill_name, num_avail, level, single)
 			return
 		end
 	end
-	AddRecipe(prof, skill_name, skill_idx, single and 1 or num_avail)
+	AddRecipe(prof, skill_name_data, skill_idx, single and 1 or num_avail)
 end
 
 local IterEnchant
@@ -323,7 +323,7 @@ do
 		_G.ENCHSLOT_WEAPON
 	}
 
-	function IterEnchant(prof, skill_idx, skill_name, num_avail, level, single)
+	function IterEnchant(prof, skill_idx, skill_name_data, num_avail, level, single)
 		if num_avail < 1 then
 			return
 		end
@@ -334,27 +334,27 @@ do
 		if not eqref then
 			if string.find(cur_item.name, L["Enchanting Vellum"]) then
 				for k, v in pairs(ItemEnch) do
-					if skill_name.normal:find(v) then
+					if skill_name_data.normal:find(v) then
 						found = true
 						break
 					end
 				end
 			elseif cur_item.subtype == L["Enchanting"] then
-				IterTrade(prof, skill_idx, skill_name, num_avail, level, single)
+				IterTrade(prof, skill_idx, skill_name_data, num_avail, level, single)
 				return
 			end
 		elseif cur_item.eqloc == "INVTYPE_WEAPON" or cur_item.eqloc == "INVTYPE_WEAPONMAINHAND" or cur_item.eqloc == "INVTYPE_WEAPONOFFHAND" then
-			if (not skill_name.normal:find(EquipSlot["INVTYPE_2HWEAPON"])) and skill_name.normal:find(eqref) then
+			if (not skill_name_data.normal:find(EquipSlot["INVTYPE_2HWEAPON"])) and skill_name_data.normal:find(eqref) then
 				found = true
 			end
 		elseif cur_item.eqloc == "INVTYPE_2HWEAPON" then
-			if skill_name.normal:find(eqref)
-			   or skill_name.normal:find(EquipSlot["INVTYPE_WEAPON"])
+			if skill_name_data.normal:find(eqref)
+			   or skill_name_data.normal:find(EquipSlot["INVTYPE_WEAPON"])
 			   or (cur_item.subtype == L["Staves"]
-			       and skill_name.normal:find(L["Staff"])) then
+			       and skill_name_data.normal:find(L["Staff"])) then
 				found = true
 			end
-		elseif skill_name.normal:find(eqref) then
+		elseif skill_name_data.normal:find(eqref) then
 			found = true
 		end
 
@@ -369,7 +369,7 @@ do
 		if enchant_level and enchant_level > level then
 			return
 		end
-		AddRecipe(prof, skill_name, skill_idx, 1)
+		AddRecipe(prof, skill_name_data, skill_idx, 1)
 	end
 end
 
@@ -430,19 +430,19 @@ do
 		if not PROF_MENU_DATA then
 			PROF_MENU_DATA = {
 				[PROF_ENCHANTING] = {
-					["name"] = SPELL_DISENCHANT,
-					["icon"] = select(3, _G.GetSpellInfo(SPELL_DISENCHANT)),
-					["CanPerform"] = private.CanDisenchant,
+					name = SPELL_DISENCHANT,
+					icon = select(3, _G.GetSpellInfo(SPELL_DISENCHANT)),
+					CanPerform = private.CanDisenchant,
 				},
 				[PROF_INSCRIPTION] = {
-					["name"] = SPELL_MILLING,
-					["icon"] = select(3, _G.GetSpellInfo(SPELL_MILLING)),
-					["CanPerform"] = private.CanMill,
+					name = SPELL_MILLING,
+					icon = select(3, _G.GetSpellInfo(SPELL_MILLING)),
+					CanPerform = private.CanMill,
 				},
 				[PROF_JEWELCRAFTING] = {
-					["name"] = SPELL_PROSPECTING,
-					["icon"] = select(3, _G.GetSpellInfo(SPELL_PROSPECTING)),
-					["CanPerform"] = private.CanProspect,
+					name = SPELL_PROSPECTING,
+					icon = select(3, _G.GetSpellInfo(SPELL_PROSPECTING)),
+					CanPerform = private.CanProspect,
 				},
 			}
 		end
@@ -504,10 +504,10 @@ do
 			anchor = _G.GetMouseFocus()
 		end
 
-		for i = 1, #active_tables do -- Release the tables for re-use.
-			wipe(active_tables[i])
-			table.insert(table_heap, active_tables[i])
-			active_tables[i] = nil
+		for index = 1, #active_tables do -- Release the tables for re-use.
+			wipe(active_tables[index])
+			table.insert(table_heap, active_tables[index])
+			active_tables[index] = nil
 		end
 		wipe(recipes)
 
@@ -584,7 +584,7 @@ do
 	function Revelation:OnInitialize()
 		local LDBinfo = {
 			type = "launcher",
-			icon = "Interface\\Icons\\Spell_Fire_SealOfFire",
+			icon = [[Interface\Icons\Spell_Fire_SealOfFire]],
 			label = ADDON_NAME,
 			OnClick = function(button)
 				if options_frame:IsVisible() then
@@ -728,8 +728,8 @@ end
 -------------------------------------------------------------------------------
 do
 	local MouseButton = {
-		[1] = "LeftButton",
-		[2] = "RightButton",
+		"LeftButton",
+		"RightButton",
 	}
 	local click_handled = false -- For HandleModifiedItemClick kludge...
 

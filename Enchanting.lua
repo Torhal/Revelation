@@ -19,7 +19,7 @@ local ENCHANT_LEVELS
 -------------------------------------------------------------------------------
 function private.CanDisenchant()
 	local cur_item = private.cur_item
-	local id = _G.select(3, cur_item.link:find("item:(%d+):"))
+	local item_id = _G.select(3, cur_item.link:find("item:(%d+):"))
 
 	if not CANNOT_DE then
 		CANNOT_DE = {
@@ -50,7 +50,7 @@ function private.CanDisenchant()
 		}
 	end
 
-	if not id or CANNOT_DE[_G.tonumber(id)] then
+	if not item_id or CANNOT_DE[_G.tonumber(item_id)] then
 		return false
 	end
 	local type = cur_item.type
