@@ -377,10 +377,10 @@ do
 	local PROF_MENU_DATA
 
 	local DIFFICULTY_IDS = {
-		["trivial"] = 1,
-		["easy"] = 2,
-		["medium"] = 3,
-		["optimal"] = 4,
+		trivial = 1,
+		easy = 2,
+		medium = 3,
+		optimal = 4,
 	}
 
 	local name_pair = {}
