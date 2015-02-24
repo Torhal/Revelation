@@ -362,8 +362,7 @@ do
 		end
 		local _, _, enchant_string = string.find(_G.GetTradeSkillRecipeLink(skill_idx), "^|%x+|H(.+)|h%[.+%]")
 		local _, enchant_spell_id = (":"):split(enchant_string)
-		local EnchantLevels = private.GetEnchantLevels()
-		local enchant_level = EnchantLevels[tonumber(enchant_spell_id)]
+		local enchant_level = private.GetEnchantLevels()[tonumber(enchant_spell_id)]
 
 		if enchant_level and enchant_level > level then
 			return
